@@ -106,8 +106,11 @@ int main()
         strtok(firstline, " ");
         resource = strtok(NULL, " ");
 
-        char page[200];
+        char header[200];
         char requestedResource[200], filename[200];
+        char type[20];
+        int code;
+        char message[20];
 
         printf("\n*****************\nRequested resource: %s\n", resource);
 
@@ -119,17 +122,27 @@ int main()
         }
 
         int fd = open(filename, O_RDONLY);
+        if(fd == -1) {
+            fd = open("404.html", O_RDONLY);
+            code = 404;
+            strcpy(message, "Not Found");
+            strcpy(type, "text/html");
+        } else {
+            code = 200;
+            strcpy(message, "OK");
+            strcpy(type, find_type(filename));
+        }
+            struct stat stat_buf;
+            fstat(fd, &stat_buf);
 
-        struct stat stat_buf;
-        fstat(fd, &stat_buf);
+            sprintf(header, "HTTP/1.1 %d %s\r\nContent-length: %ld\r\nContent-Type: %s\r\n\r\n", code, message, stat_buf.st_size, type);
 
-        sprintf(page, "HTTP/1.1 200 OK\r\nContent-length: %ld\r\nContent-Type: %s\r\n\r\n", stat_buf.st_size, find_type(filename));
+            write(connfd, header, strlen(header));
 
-        write(connfd, page, strlen(page));
-
-        int a = sendfile(connfd, fd, NULL, stat_buf.st_size);
-        printf("\n%d\n*******************\n", a);
-        close(fd);
+            int a = sendfile(connfd, fd, NULL, stat_buf.st_size);
+            printf("\n%d\n*******************\n", a);
+            close(fd);
+        
     }
 
     close(connfd);
