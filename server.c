@@ -114,8 +114,6 @@ int main()
         if(!strcmp(resource, "/")) {
             strcpy(filename, "index.html");
         } else {
-            /*strtok(resource, "/");
-            requestedResource = strtok(NULL, "/");*/
             strcpy(requestedResource, resource + 1);
             strcpy(filename, requestedResource);
         }
@@ -125,7 +123,7 @@ int main()
         struct stat stat_buf;
         fstat(fd, &stat_buf);
 
-        sprintf(page, "HTTP/1.1 200 OK\nContent-length: %ld\nContent-Type: %s\n\r\n\r", stat_buf.st_size, find_type(filename));
+        sprintf(page, "HTTP/1.1 200 OK\r\nContent-length: %ld\r\nContent-Type: %s\r\n\r\n", stat_buf.st_size, find_type(filename));
 
         write(connfd, page, strlen(page));
 
