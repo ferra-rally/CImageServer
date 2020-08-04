@@ -85,28 +85,22 @@ int main()
     char page[200];
 
     if(!strcmp("/", resource) || !strcmp("/index.html", resource)) {
-        //sprintf(string, "<head>\n<title>This is a big discovery</title>\n</head>\n<body><h1>Benvenuti in questo fantastico server</h1></body>");
-        
 
         int fd = open("index.html", O_RDONLY);
 
-        FILE *file = fdopen(fd, "r");
-        fseek(file, 0L, SEEK_END);
-        int size = ftell(file);
-        fseek(file, 0L, SEEK_SET);
+        struct stat stat_buf;
+        fstat(fd, &stat_buf);
 
-        char *string = malloc(size + 1);
-        fread(string, 1, size, file);
-        fclose(file);
-
-        sprintf(page, "HTTP/1.1 200 OK\nContent-length: %d\nContent-Type: text/html\n\r\n\r%s", size, string);
-
-        close(fd);
+        sprintf(page, "HTTP/1.1 200 OK\nContent-length: %ld\nContent-Type: text/html\n\r\n\r", stat_buf.st_size);
 
         write(connfd, page, strlen(page));
+
+        int a = sendfile(connfd, fd, NULL, stat_buf.st_size);
+        printf("\n%d\n", a);
+        close(fd);
+
     }
 
-    // After chatting close the socket 
     close(connfd);
     close(sockfd);
 }
