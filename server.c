@@ -8,13 +8,34 @@
 #include <sys/socket.h> 
 #include <sys/types.h> 
 #include <sys/sendfile.h>
-#define MAX 80 
 #define PORT 8080
 #define SA struct sockaddr 
 
 #define handle_error(msg) \
     do { perror(msg); exit(EXIT_FAILURE); } while (0)
-  
+
+
+char *find_type(char *buff) {
+    char *type;
+    char *temp;
+
+    temp = malloc(strlen(buff));
+
+    strcpy(temp, buff);
+    strtok(temp, ".");
+    type = strtok(NULL, ".");
+
+    printf("Found type: %s\n", type);
+
+    if(!strcmp(type, "jpg")) {
+        return "image/jpg";
+    } else if(!strcmp(type, "html")) {
+        return "text/html";
+    }
+    
+    return type;
+}
+
 // Driver function 
 int main() 
 { 
@@ -23,7 +44,11 @@ int main()
     char response[4096];
 
     // socket create and verification 
-    sockfd = socket(AF_INET, SOCK_STREAM, 0); 
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
+        handle_error("setsockopt(SO_REUSEADDR) failed");
+
     if (sockfd == -1) { 
         printf("socket creation failed...\n"); 
         exit(0); 
@@ -65,40 +90,48 @@ int main()
   
     memset(response,0,sizeof(response));
 
-    int n;
-    n = read(connfd, response, 4096);
-    if(n < 0) {
-        printf("Error reading\n");
-    } else {
-        printf("Recieved:\n%s", response);
-    }
+    while(1) {
 
-    char *resource, *firstline;
+        int n;
+        n = read(connfd, response, 4096);
+        if(n < 0) {
+            printf("Error reading\n");
+        } else {
+            printf("Recieved:\n%s", response);
+        }
 
-    firstline = strtok(response, "\n");
-    printf("First line: %s\n", firstline);
-    strtok(firstline, " ");
-    resource = strtok(NULL, " ");
+        char *resource, *firstline;
 
-    printf("\n*****************\nRequested resource: %s\n", resource);
+        firstline = strtok(response, "\n");
+        strtok(firstline, " ");
+        resource = strtok(NULL, " ");
 
-    char page[200];
+        char page[200];
+        char requestedResource[200], filename[200];
 
-    if(!strcmp("/", resource) || !strcmp("/index.html", resource)) {
+        printf("\n*****************\nRequested resource: %s\n", resource);
 
-        int fd = open("index.html", O_RDONLY);
+        if(!strcmp(resource, "/")) {
+            strcpy(filename, "index.html");
+        } else {
+            /*strtok(resource, "/");
+            requestedResource = strtok(NULL, "/");*/
+            strcpy(requestedResource, resource + 1);
+            strcpy(filename, requestedResource);
+        }
+
+        int fd = open(filename, O_RDONLY);
 
         struct stat stat_buf;
         fstat(fd, &stat_buf);
 
-        sprintf(page, "HTTP/1.1 200 OK\nContent-length: %ld\nContent-Type: text/html\n\r\n\r", stat_buf.st_size);
+        sprintf(page, "HTTP/1.1 200 OK\nContent-length: %ld\nContent-Type: %s\n\r\n\r", stat_buf.st_size, find_type(filename));
 
         write(connfd, page, strlen(page));
 
         int a = sendfile(connfd, fd, NULL, stat_buf.st_size);
-        printf("\n%d\n", a);
+        printf("\n%d\n*******************\n", a);
         close(fd);
-
     }
 
     close(connfd);
