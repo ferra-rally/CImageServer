@@ -102,19 +102,13 @@ int main() {
             printf("Recieved:\n%s", response);
         }
 
-        char *resource, *firstline;
-
-        firstline = strtok(response, "\n");
-        strtok(firstline, " ");
-        resource = strtok(NULL, " ");
+        char *resource = parse_resource(response);
 
         char header[200];
         char requestedResource[200], filename[200];
         char type[20];
         int code;
         char message[20];
-
-        printf("\n*****************\nRequested resource: %s\n", resource);
 
         if (!strcmp(resource, "/")) {
             strcpy(filename, "index.html");
