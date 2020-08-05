@@ -8,6 +8,7 @@
 #include <sys/socket.h> 
 #include <sys/types.h> 
 #include <sys/sendfile.h>
+#include <signal.h>
 
 #include "http.h"
 
@@ -16,6 +17,9 @@
 #define handle_error(msg) \
     do { perror(msg); exit(EXIT_FAILURE); } while (0)
 
+void pipe_handle(int sig_num, siginfo_t *sig_info, void *context){
+	printf("PIPE\n");
+}
 
 char *find_type(char *buff)
 {
@@ -44,6 +48,17 @@ int main() {
     int sockfd, connfd, len;
     struct sockaddr_in servaddr, cli;
     char response[4096];
+
+    struct sigaction act;
+
+	//set SIGPIPE handle
+	memset(&act,'\0', sizeof(act));
+	act.sa_sigaction = pipe_handle;
+	act.sa_flags = SA_SIGINFO;
+
+	if(sigaction(SIGPIPE, &act, NULL) < 0){
+		return 1;
+	} 
 
     // socket create and verification
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
