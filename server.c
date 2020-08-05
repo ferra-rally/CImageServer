@@ -5,12 +5,14 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <sys/socket.h> 
 #include <sys/types.h> 
 #include <sys/sendfile.h>
 #include <signal.h>
 
 #include "http.h"
+#include "list.h"
 
 #define PORT 8080
 
@@ -43,72 +45,16 @@ char *find_type(char *buff)
     return type;
 }
 
-// Driver function 
-int main() {
-    int sockfd, connfd, len;
-    struct sockaddr_in servaddr, cli;
+void *thread_func(void *args)
+{
     char response[4096];
+    struct client *client = (struct client *)args;
+    int connfd = client->conn_id;
 
-    struct sigaction act;
-
-	//set SIGPIPE handle
-	memset(&act,'\0', sizeof(act));
-	act.sa_sigaction = pipe_handle;
-	act.sa_flags = SA_SIGINFO;
-
-	if(sigaction(SIGPIPE, &act, NULL) < 0){
-		return 1;
-	} 
-
-    // socket create and verification
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    printf("thread %lu alive\n", pthread_self());
     
-    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
-        handle_error("setsockopt(SO_REUSEADDR) failed");
-
-    if (sockfd == -1) {
-        printf("socket creation failed...\n");
-        exit(0);
-    } else {
-        printf("Socket successfully created..\n");
-    }
-    memset(&servaddr, 0, sizeof(struct sockaddr_in));
-  
-    // assign IP, PORT 
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port = htons(PORT);
-  
-    // Binding newly created socket to given IP and verification 
-    if ((bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr))) != 0) {
-        handle_error("Bind failed");
-        exit(0);
-    } else {
-        printf("Socket successfully binded..\n");
-    }
-  
-    // Now server is ready to listen and verification 
-    if ((listen(sockfd, 5)) != 0) {
-        printf("Listen failed...\n");
-        exit(0);
-    } else {
-        printf("Server listening..\n");
-    }
-    len = sizeof(cli);
-  
-    // Accept the data packet from client and verification 
-    connfd = accept(sockfd, (struct sockaddr *)&cli, (socklen_t *)&len);
-    if (connfd < 0) {
-        printf("server acccept failed...\n");
-        exit(0);
-    } else {
-        printf("server acccept the client...\n");
-    }
-
-    memset(response,0,sizeof(response));
-
     while(1) {
-
+        memset(response, 0, sizeof(response));
         int n;
         n = read(connfd, response, 4096);
         if (n < 0) {
@@ -143,19 +89,111 @@ int main() {
             strcpy(message, "OK");
             strcpy(type, find_type(filename));
         }
-            struct stat stat_buf;
-            fstat(fd, &stat_buf);
+    
+        struct stat stat_buf;
+        fstat(fd, &stat_buf);
 
-            sprintf(header, "HTTP/1.1 %d %s\r\nContent-length: %ld\r\nContent-Type: %s\r\n\r\n", code, message, stat_buf.st_size, type);
+        sprintf(header, "HTTP/1.1 %d %s\r\nContent-length: %ld\r\nContent-Type: %s\r\n\r\n", code, message, stat_buf.st_size, type);
 
-            write(connfd, header, strlen(header));
+        write(connfd, header, strlen(header));
 
-            int a = sendfile(connfd, fd, NULL, stat_buf.st_size);
-            printf("\n%d\n*******************\n", a);
-            close(fd);
+        int a = sendfile(connfd, fd, NULL, stat_buf.st_size);
+        printf("\n%d\n*******************\n", a);
+        close(fd);
+    }
+}
+
+int main() {
+    int sockfd, connfd, len;
+    struct sockaddr_in servaddr, cli;
+
+    struct sigaction act;
+
+	// Set SIGPIPE handler
+	memset(&act,'\0', sizeof(act));
+	act.sa_sigaction = pipe_handle;
+	act.sa_flags = SA_SIGINFO;
+
+	if (sigaction(SIGPIPE, &act, NULL) < 0) {
+		handle_error("sigaction");
+	}
+
+    // Socket creation and verification
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
+        handle_error("setsockopt(SO_REUSEADDR) failed");
+
+    if (sockfd == -1) {
+        printf("socket creation failed...\n");
+        exit(0);
+    } else {
+        printf("Socket successfully created..\n");
+    }
+    memset(&servaddr, 0, sizeof(struct sockaddr_in));
+  
+    // Assign IP, PORT 
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    servaddr.sin_port = htons(PORT);
+  
+    // Bind newly created socket to given IP and verification 
+    if ((bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr))) != 0) {
+        handle_error("Bind failed");
+        exit(0);
+    } else {
+        printf("Socket successfully binded..\n");
+    }
+  
+    // Now server is ready to listen and verification 
+    if ((listen(sockfd, 5)) != 0) {
+        printf("Listen failed...\n");
+        exit(0);
+    } else {
+        printf("Server listening..\n");
+    }
+    len = sizeof(cli);
+
+    // Initialize timeout structure to 300 seconds
+	struct timeval timeout;
+	timeout.tv_sec = 300;
+	timeout.tv_usec = 0;
+
+	pthread_attr_t attr;
+	if (pthread_attr_init(&attr) != 0)
+		handle_error("pthread_attr_init");
+	if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0)
+		handle_error("pthread_attr_setdetachstate");
+
+	struct sockaddr_in client_addr;
+
+    while (1) {
+        // Accept the data packet from client and verification 
+        connfd = accept(sockfd, (struct sockaddr *)&cli, (socklen_t *)&len);
+        if (connfd < 0) {
+            printf("server acccept failed...\n");
+            exit(0);
+        } else {
+            printf("server acccept the client...\n");
+        }
+
+        // Set socket options
+		if (setsockopt(connfd, SOL_SOCKET, SO_RCVTIMEO, (void *)&timeout,
+					(socklen_t)sizeof(timeout)) == -1)
+			handle_error("setsockopt");
+		if (setsockopt(connfd, SOL_SOCKET, SO_SNDTIMEO, (void *)&timeout,
+					(socklen_t)sizeof(timeout)) == -1)
+			handle_error("setsockopt");
+
+        // Pass connfd to thread
+		pthread_t tid;
+		if (pthread_create(&tid, &attr, thread_func, (void *) append_node(connfd)) != 0)
+			handle_error("pthread_create");
 
     }
 
     close(connfd);
     close(sockfd);
+
+    return 0;
 }
