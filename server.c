@@ -63,6 +63,7 @@ void *thread_func(void *args)
             printf("Recieved:\n%s", response);
         }
 
+        printf("********************\nQuality: %f\n***************\n", find_quality(response, "image/webp"));
         char *resource = parse_resource(response);
 
         char header[200];

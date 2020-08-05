@@ -3,7 +3,60 @@
 #include <stdlib.h>
 #include <string.h>
 
-int find_quality(char *buff) {
+struct Header_line {
+    char *line;
+    struct Header_line *next;
+};
+
+char *find_line(char *header, char *target) {
+    char *tmp, *dest;
+
+    tmp = strstr(header, target);
+
+    if(tmp != NULL) {
+        dest = strtok(tmp, "\n");
+        return dest;
+    } else {
+        return "";
+    }
+}
+
+float find_quality(char *buff, char *extension) {
+    char *header = malloc(strlen(buff));
+    char *accept_string;
+    char *tmp;
+    char *target_quality;
+    char *qstring;
+    char *x;
+
+    strcpy(header, buff);
+
+    if (strstr(header, "Accept:") == NULL) {
+        perror("Error: Header does not containt accept");
+        return -1;
+    }
+
+    
+    accept_string = find_line(header, "Accept: ");
+
+    tmp = strstr(accept_string, extension);
+    if(tmp == NULL) {
+        x = strstr(accept_string, "*/*");
+    } else {
+        x = strstr(tmp, extension);
+        printf("Not Default %s\n", x);
+    }
+
+    target_quality = strtok(x, ",\n");
+
+    qstring = strstr(target_quality, "q=");
+
+    if(qstring != NULL) {
+        printf("TARGET: %s\n", qstring);
+        qstring = qstring + 2;
+        return atof(qstring);
+    }
+    
     return 1;
 }
 
@@ -14,13 +67,9 @@ char *parse_resource(char *buff) {
 
     strcpy(header, buff);
 
-    printf("=========================\n");
     firstline = strtok(header, "\n");
     strtok(firstline, " ");
     resource = strtok(NULL, " ");
-
-    printf("Resource: %s\n", resource);
-    printf("=========================\n");
 
     return resource;
 }
