@@ -8,6 +8,9 @@
 #include <sys/socket.h> 
 #include <sys/types.h> 
 #include <sys/sendfile.h>
+
+#include "http.h"
+
 #define PORT 8080
 #define SA struct sockaddr 
 
