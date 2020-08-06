@@ -76,8 +76,10 @@ void *thread_func(void *args)
 
         write(connfd, header, strlen(header));
 
-        int a = sendfile(connfd, fd, NULL, stat_buf.st_size);
-        printf("\n%d\n*******************\n", a);
+        if(!strcmp(find_method(response), "GET")) {
+            sendfile(connfd, fd, NULL, stat_buf.st_size);
+        }
+        printf("\n*******************\n");
         close(fd);
     }
 }

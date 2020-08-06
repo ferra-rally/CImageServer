@@ -8,6 +8,14 @@ struct Header_line {
     struct Header_line *next;
 };
 
+char *find_method(char *header) {
+    char *tmp = malloc(strlen(header));
+
+    strcpy(tmp, header);
+
+    return strtok(tmp, " ");
+}
+
 char *find_line(char *header, char *target) {
     char *tmp, *dest;
 
