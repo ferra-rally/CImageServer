@@ -25,24 +25,23 @@ void pipe_handle(int sig_num, siginfo_t *sig_info, void *context){
 
 void *thread_func(void *args)
 {
-    char request[4096];
+    char response[4096];
     struct client *client = (struct client *)args;
     int connfd = client->conn_id;
 
     printf("thread %lu alive\n", pthread_self());
     
     while(1) {
-        memset(request, 0, sizeof(request));
-        int n;
-        n = read(connfd, request, 4096);
-        if (n < 0) {
-            printf("Error reading\n");
+        memset(response, 0, sizeof(response));
+
+        if (read(connfd, response, 4096) <= 0) {
+            break;
         } else {
-            printf("Recieved:\n%s", request);
+            printf("Recieved:\n%s", response);
         }
 
-        printf("********************\nQuality: %f\n***************\n", find_quality(request, "image/webp"));
-        char *resource = parse_resource(request);
+        printf("********************\nQuality: %f\n***************\n", find_quality(response, "image/webp"));
+        char *resource = parse_resource(response);
 
         char header[200];
         char requestedResource[200], filename[200];
@@ -74,14 +73,23 @@ void *thread_func(void *args)
 
         sprintf(header, "HTTP/1.1 %d %s\r\nContent-length: %ld\r\nContent-Type: %s\r\n\r\n", code, message, stat_buf.st_size, type);
 
-        write(connfd, header, strlen(header));
+        if (write(connfd, header, strlen(header)) <= 0) {
+            break;
+        }
 
-        if(!strcmp(find_method(request), "GET")) {
-            sendfile(connfd, fd, NULL, stat_buf.st_size);
+        if (!strcmp(find_method(response), "GET")) {
+            if (sendfile(connfd, fd, NULL, stat_buf.st_size) <= 0) {
+                break;
+            }
         }
         printf("\n*******************\n");
         close(fd);
     }
+    if (close(connfd) < 0) {
+        printf("Error closing socket\n");
+    }
+    remove_node(client);
+    pthread_exit(NULL);
 }
 
 int main() {
@@ -91,7 +99,7 @@ int main() {
     struct sigaction act;
 
 	// Set SIGPIPE handler
-	memset(&act,'\0', sizeof(act));
+	memset(&act, 0, sizeof(act));
 	act.sa_sigaction = pipe_handle;
 	act.sa_flags = SA_SIGINFO;
 
