@@ -25,24 +25,24 @@ void pipe_handle(int sig_num, siginfo_t *sig_info, void *context){
 
 void *thread_func(void *args)
 {
-    char response[4096];
+    char request[4096];
     struct client *client = (struct client *)args;
     int connfd = client->conn_id;
 
     printf("thread %lu alive\n", pthread_self());
     
     while(1) {
-        memset(response, 0, sizeof(response));
+        memset(request, 0, sizeof(request));
         int n;
-        n = read(connfd, response, 4096);
+        n = read(connfd, request, 4096);
         if (n < 0) {
             printf("Error reading\n");
         } else {
-            printf("Recieved:\n%s", response);
+            printf("Recieved:\n%s", request);
         }
 
-        printf("********************\nQuality: %f\n***************\n", find_quality(response, "image/webp"));
-        char *resource = parse_resource(response);
+        printf("********************\nQuality: %f\n***************\n", find_quality(request, "image/webp"));
+        char *resource = parse_resource(request);
 
         char header[200];
         char requestedResource[200], filename[200];
@@ -76,7 +76,7 @@ void *thread_func(void *args)
 
         write(connfd, header, strlen(header));
 
-        if(!strcmp(find_method(response), "GET")) {
+        if(!strcmp(find_method(request), "GET")) {
             sendfile(connfd, fd, NULL, stat_buf.st_size);
         }
         printf("\n*******************\n");

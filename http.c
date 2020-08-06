@@ -30,7 +30,7 @@ char *find_line(char *header, char *target) {
 }
 
 int connection_status(char *header) {
-    if(strstr(header, "Connection: keep-alive") != NULL) }{
+    if(strstr(header, "Connection: keep-alive") != NULL) {
         return 1;
     } else {
         return 0;
