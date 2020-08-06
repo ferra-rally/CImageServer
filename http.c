@@ -76,7 +76,7 @@ float find_quality(char *buff, char *extension) {
     return 1;
 }
 
-char *parse_resource(char *buff) {
+char *parse_resource(char *buff, char *params) {
     char *header = malloc(strlen(buff));
     char *resource;
     char *firstline;
@@ -85,7 +85,8 @@ char *parse_resource(char *buff) {
 
     firstline = strtok(header, "\n");
     strtok(firstline, " ");
-    resource = strtok(NULL, " ");
+    resource = strtok(NULL, " ?");
+    //strtok(NULL, " ?");
 
     return resource;
 }
