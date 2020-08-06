@@ -23,28 +23,6 @@ void pipe_handle(int sig_num, siginfo_t *sig_info, void *context){
 	printf("PIPE\n");
 }
 
-char *find_type(char *buff)
-{
-    char *type;
-    char *temp;
-
-    temp = malloc(strlen(buff));
-
-    strcpy(temp, buff);
-    strtok(temp, ".");
-    type = strtok(NULL, ".");
-
-    printf("Found type: %s\n", type);
-
-    if (!strcmp(type, "jpg")) {
-        return "image/jpg";
-    } else if (!strcmp(type, "html")) {
-        return "text/html";
-    }
-    
-    return type;
-}
-
 void *thread_func(void *args)
 {
     char response[4096];

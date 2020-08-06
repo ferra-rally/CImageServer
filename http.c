@@ -73,3 +73,25 @@ char *parse_resource(char *buff) {
 
     return resource;
 }
+
+char *find_type(char *buff)
+{
+    char *type;
+    char *temp;
+
+    temp = malloc(strlen(buff));
+
+    strcpy(temp, buff);
+    strtok(temp, ".");
+    type = strtok(NULL, ".");
+
+    printf("Found type: %s\n", type);
+
+    if (!strcmp(type, "jpg")) {
+        return "image/jpg";
+    } else if (!strcmp(type, "html")) {
+        return "text/html";
+    }
+    
+    return type;
+}
