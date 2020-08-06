@@ -29,6 +29,14 @@ char *find_line(char *header, char *target) {
     }
 }
 
+int connection_status(char *header) {
+    if(strstr(header, "Connection: keep-alive") != NULL) }{
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 float find_quality(char *buff, char *extension) {
     char *header = malloc(strlen(buff));
     char *accept_string;
