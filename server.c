@@ -10,6 +10,7 @@
 #include <sys/types.h> 
 #include <sys/sendfile.h>
 #include <signal.h>
+#include <arpa/inet.h>
 
 #include "http.h"
 #include "list.h"
@@ -23,6 +24,18 @@
 void pipe_handle(int sig_num, siginfo_t *sig_info, void *context){
 	printf("PIPE\n");
 }
+
+void IP_logger(int fd){
+
+	struct sockaddr_in addr;
+	socklen_t addr_size = sizeof(struct sockaddr_in);
+	int res = getpeername(fd, (struct sockaddr *)&addr, &addr_size);
+	char *dotAddr = malloc(sizeof(char)*20);
+	dotAddr = strdup(inet_ntoa(addr.sin_addr));
+	printf("Client addr %s\n", dotAddr); // prints "10.0.0.1"
+	free(dotAddr);
+}
+
 
 void *thread_func(void *args)
 {
@@ -164,6 +177,7 @@ int main() {
             printf("server acccept failed...\n");
             exit(0);
         } else {
+        	IP_logger(connfd);
             printf("server acccept the client...\n");
         }
 
