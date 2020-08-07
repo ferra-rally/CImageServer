@@ -1,0 +1,48 @@
+Copy to clipboard
+
+<!DOCTYPE html>
+<html>
+    <body>
+        <h1>51Degrees cloud example</h1>
+        <button type="button" onclick="buttonClicked()">Client interaction</button>
+        <div id="htmlExampleOutput"></div>
+    </body>
+</html>
+<script async src="https://cloud.51degrees.com/api/v4/AQQNX4o8QvonleA52Eg.js"></script>
+<script type="text/javascript">
+    window.onload = function() {
+        fod.complete(function (data) {
+            // Fetch the properties from the JSON response and write to the page.
+            addText("ScreenPixelsWidth: " + data.device["screenpixelswidth"]);
+            addText("ScreenPixelsWidthJavaScript: " + data.device["screenpixelswidthjavascript"]);
+            addText("ScreenPixelsHeight: " + data.device["screenpixelsheight"]);
+            addText("ScreenPixelsHeightJavaScript: " + data.device["screenpixelsheightjavascript"]);
+            addText("ScreenMMWidth: " + data.device["screenmmwidth"]);
+            addText("ScreenMMHeight: " + data.device["screenmmheight"]);
+            addText("BitsPerPixel: " + data.device["bitsperpixel"]);
+            addText("SuggestedImageButtonHeightPixels: " + data.device["suggestedimagebuttonheightpixels"]);
+            addText("SuggestedImageButtonHeightMms: " + data.device["suggestedimagebuttonheightmms"]);
+            addText("SuggestedLinkSizePixels: " + data.device["suggestedlinksizepixels"]);
+            addText("SuggestedLinkSizePoints: " + data.device["suggestedlinksizepoints"]);
+            addText("ScreenMMDiagonal: " + data.device["screenmmdiagonal"]);
+            addText("ScreenInchesDiagonal: " + data.device["screeninchesdiagonal"]);
+            addText("ScreenInchesHeight: " + data.device["screeninchesheight"]);
+            addText("ScreenInchesWidth: " + data.device["screenincheswidth"]);
+            addText("ScreenType: " + data.device["screentype"]);
+            addText("ScreenMMSquare: " + data.device["screenmmsquare"]);
+            addText("ScreenMMDiagonalRounded: " + data.device["screenmmdiagonalrounded"]);
+            addText("ScreenInchesSquare: " + data.device["screeninchessquare"]);
+            addText("ScreenInchesDiagonalRounded: " + data.device["screeninchesdiagonalrounded"]);
+        });
+    }
+
+    buttonClicked = function() {
+        fod.complete(function (data) {
+            
+        }, '');
+    }
+
+    addText = function(text){
+	    document.getElementById("htmlExampleOutput").innerHTML+=text + "<br>";
+    }
+</script>

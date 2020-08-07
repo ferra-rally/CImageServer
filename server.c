@@ -1,3 +1,5 @@
+#include <python3.8/Python.h>
+#include <python3.8/pythonrun.h>
 #include <stdio.h> 
 #include <netinet/in.h> 
 #include <stdlib.h> 
@@ -16,12 +18,47 @@
 #include "convert.h"
 
 #define PORT 8080
+#define SERVER_NAME "CServi"
+#define SERVER_VERSION "0.1"
 
 #define handle_error(msg) \
     do { perror(msg); exit(EXIT_FAILURE); } while (0)
 
 void pipe_handle(int sig_num, siginfo_t *sig_info, void *context){
 	printf("PIPE\n");
+}
+
+void exec_pycode(char* ua)
+{
+    PyObject *pName, *pModule, *pDict, *pFunc, *pValue, *presult;
+
+  Py_Initialize();
+  PyObject* myModuleString = PyUnicode_FromString((char*)"resolveus");
+  PyObject* myModule = PyImport_Import(myModuleString);
+  if(myModule == NULL) {
+      printf("NULL mymodule\n");
+      return;
+  }
+  pDict = PyModule_GetDict(myModule);
+  pFunc = PyDict_GetItemString(pDict, "resolve_ua");
+  if(pFunc == NULL) {
+      printf("No Function\n");
+  }
+  char* result;
+
+if (PyCallable_Check(pFunc))
+   {
+       pValue=Py_BuildValue("(z)", ua);
+       PyErr_Print();
+       presult=PyObject_CallObject(pFunc,pValue);
+       result = PyObject_Str(presult);
+       PyErr_Print();
+   } else 
+   {
+       PyErr_Print();
+   }
+
+  Py_Finalize();
 }
 
 void *thread_func(void *args)
@@ -42,6 +79,7 @@ void *thread_func(void *args)
         }
 
         printf("********************\nQuality: %f\n***************\n", find_quality(request, "image/webp"));
+        exec_pycode("Mozilla/5.0 (Linux; Android 6.0.1; Nexus 6P Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.83 Mobile Safari/537.36");
         char *resource = parse_resource(request);
 
         char header[200];
