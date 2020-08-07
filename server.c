@@ -13,6 +13,7 @@
 #include <sys/sendfile.h>
 #include <signal.h>
 #include <arpa/inet.h>
+#include <time.h>
 
 #include "http.h"
 #include "list.h"
@@ -23,9 +24,24 @@
 #define SERVER_VERSION "0.1"
 
 #define handle_error(msg) \
-    do { perror(msg); exit(EXIT_FAILURE); } while (0)
+    do { time_t rawtime; struct tm *info; char buffer[80]; time(&rawtime); info = localtime(&rawtime); strftime(buffer,80,"%x - %I:%M%p",info); fprintf(logFile, "ERROR: %s -- %s\n", msg, buffer); fflush(logFile); perror(msg); exit(EXIT_FAILURE); } while (0)
+
+FILE *logFile;
+
 
 void pipe_handle(int sig_num, siginfo_t *sig_info, void *context){
+	
+	time_t rawtime;
+	struct tm *info;
+	char buffer[80];
+
+	time(&rawtime);
+	info = localtime(&rawtime);
+
+	strftime(buffer,80,"%x - %I:%M%p", info);
+
+	fprintf(logFile, "PIPE HANDLE: %s\n",buffer);
+	fflush(logFile);
 	printf("PIPE\n");
 }
 
@@ -51,8 +67,9 @@ if (PyCallable_Check(pFunc))
    {
        pValue=Py_BuildValue("(z)", ua);
        PyErr_Print();
-       presult=PyObject_CallObject(pFunc,pValue);
-       result = PyObject_Str(presult);
+       presult=PyObject_CallObject(pFunc,pValue);    
+       result =PyUnicode_AsUTF8(presult);
+       printf("Valore di ritorno in C %s\n", result);
        PyErr_Print();
    } else 
    {
@@ -69,6 +86,17 @@ void IP_logger(int fd){
 	int res = getpeername(fd, (struct sockaddr *)&addr, &addr_size);
 	char *dotAddr = malloc(sizeof(char)*20);
 	dotAddr = strdup(inet_ntoa(addr.sin_addr));
+	
+	time_t rawtime;
+	struct tm *info;
+	char buffer[80];
+
+	time(&rawtime);
+	info = localtime(&rawtime);
+
+	strftime(buffer,80,"%x - %I:%M%p", info);
+	fprintf(logFile, "CONNECTION: client addr %s -- %s\n", dotAddr, buffer);
+	fflush(logFile);
 	printf("Client addr %s\n", dotAddr); // prints "10.0.0.1"
 	free(dotAddr);
 }
@@ -149,6 +177,26 @@ int main() {
     struct sockaddr_in servaddr, cli;
 
     struct sigaction act;
+
+    //set environment variable for python
+    //system("export PYTHONPATH=$PYTHONPATH:pwd");
+
+
+
+    //setup logfile
+	int lfd = open("logFile.txt", O_WRONLY | O_CREAT | O_APPEND);
+	if(lfd == -1){
+		//non uso l' handle perchè nell handle scriviamo l' errore nel logfile 
+		printf("Error opening logFile\n");
+		exit(EXIT_FAILURE);
+	}
+
+	logFile = fdopen(lfd, "w");
+	if(logFile == NULL){
+		printf("Error fdopening logFile\n");
+		exit(EXIT_FAILURE);
+	}
+
 
 	// Set SIGPIPE handler
 	memset(&act, 0, sizeof(act));
