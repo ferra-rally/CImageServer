@@ -24,24 +24,39 @@
 #define SERVER_VERSION "0.1"
 
 #define handle_error(msg) \
-    do { time_t rawtime; struct tm *info; char buffer[80]; time(&rawtime); info = localtime(&rawtime); strftime(buffer,80,"%x - %I:%M%p",info); fprintf(logFile, "ERROR: %s -- %s\n", msg, buffer); fflush(logFile); perror(msg); exit(EXIT_FAILURE); } while (0)
+    do {logOnFile(1,msg);perror(msg); exit(EXIT_FAILURE); } while (0)
 
 FILE *logFile;
+
+void logOnFile(int flag, char *msg){
+	time_t rawtime; 
+	struct tm *info; 
+	char buffer[80]; 
+	time(&rawtime); 
+	char tag[80];
+
+	switch(flag){
+		case 1:
+			strcpy(tag, "ERROR");
+			break;
+		case 2:
+			strcpy(tag, "PIPE");
+			break;
+		case 3:
+			strcpy(tag, "CONNECTION");
+			break;
+	}
+
+	info = localtime(&rawtime); 
+	strftime(buffer,80,"%x - %I:%M%p",info); 
+	fprintf(logFile, "%s: %s -- %s\n", tag,msg, buffer); 
+	fflush(logFile);
+}
 
 
 void pipe_handle(int sig_num, siginfo_t *sig_info, void *context){
 	
-	time_t rawtime;
-	struct tm *info;
-	char buffer[80];
-
-	time(&rawtime);
-	info = localtime(&rawtime);
-
-	strftime(buffer,80,"%x - %I:%M%p", info);
-
-	fprintf(logFile, "PIPE HANDLE: %s\n",buffer);
-	fflush(logFile);
+	logOnFile(2,"pipe handled\n");
 	printf("PIPE\n");
 }
 
@@ -86,17 +101,11 @@ void IP_logger(int fd){
 	int res = getpeername(fd, (struct sockaddr *)&addr, &addr_size);
 	char *dotAddr = malloc(sizeof(char)*20);
 	dotAddr = strdup(inet_ntoa(addr.sin_addr));
-	
-	time_t rawtime;
-	struct tm *info;
 	char buffer[80];
 
-	time(&rawtime);
-	info = localtime(&rawtime);
+	sprintf(buffer,"Client addr %s",dotAddr);
 
-	strftime(buffer,80,"%x - %I:%M%p", info);
-	fprintf(logFile, "CONNECTION: client addr %s -- %s\n", dotAddr, buffer);
-	fflush(logFile);
+	logOnFile(3,buffer);
 	printf("Client addr %s\n", dotAddr); // prints "10.0.0.1"
 	free(dotAddr);
 }
@@ -236,7 +245,8 @@ int main() {
   
     // Now server is ready to listen and verification 
     if ((listen(sockfd, 5)) != 0) {
-        printf("Listen failed...\n");
+        //printf("Listen failed...\n");
+        handle_error("Listen failed...");
         exit(0);
     } else {
         printf("Server listening..\n");
