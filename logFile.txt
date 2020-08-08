@@ -1,9 +1,0 @@
-CONNECTION: client addr 127.0.0.1 -- 08/07/20 - 04:22PM
-CONNECTION: client addr 127.0.0.1 -- 08/07/20 - 04:22PM
-CONNECTION: Client addr 127.0.0.1 -- 08/07/20 - 04:39PM
-CONNECTION: Client addr 127.0.0.1 -- 08/07/20 - 04:40PM
-CONNECTION: Client addr 127.0.0.1 -- 08/07/20 - 04:41PM
-CONNECTION: Client addr 127.0.0.1 -- 08/07/20 - 04:41PM
-ERROR: Client addr 127.0.0.1 -- 08/07/20 - 04:43PM
-PIPE: Client addr 127.0.0.1 -- 08/07/20 - 04:43PM
-CONNECTION: Client addr 127.0.0.1 -- 08/07/20 - 04:44PM

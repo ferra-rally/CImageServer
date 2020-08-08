@@ -22,6 +22,7 @@
 #define PORT 8080
 #define SERVER_NAME "CServi"
 #define SERVER_VERSION "0.1"
+#define SUPPORTED_CONVERSION_TYPES "image/jpg, image/jpeg"
 
 #define handle_error(msg) \
     do {logOnFile(1,msg);perror(msg); exit(EXIT_FAILURE); } while (0)
@@ -60,45 +61,45 @@ void pipe_handle(int sig_num, siginfo_t *sig_info, void *context){
 	printf("PIPE\n");
 }
 
-void exec_pycode(char* ua)
-{
+char* exec_pycode(char* ua) {
     PyObject *pName, *pModule, *pDict, *pFunc, *pValue, *presult;
+    char *result;
 
   Py_Initialize();
-  PyObject* myModuleString = PyUnicode_FromString((char*)"resolveus");
-  PyObject* myModule = PyImport_Import(myModuleString);
-  if(myModule == NULL) {
+  pName = PyUnicode_FromString((char*)"resolveus");
+  pModule = PyImport_Import(pName);
+  if(pModule == NULL) {
       printf("NULL mymodule\n");
-      return;
+      return "";
   }
-  pDict = PyModule_GetDict(myModule);
+  pDict = PyModule_GetDict(pModule);
   pFunc = PyDict_GetItemString(pDict, "resolve_ua");
   if(pFunc == NULL) {
       printf("No Function\n");
   }
-  char* result;
+  
 
 if (PyCallable_Check(pFunc))
    {
        pValue=Py_BuildValue("(z)", ua);
        PyErr_Print();
        presult=PyObject_CallObject(pFunc,pValue);    
-       result =PyUnicode_AsUTF8(presult);
-       printf("Valore di ritorno in C %s\n", result);
+       result = PyUnicode_AsUTF8(presult);
+       //printf("Valore di ritorno in C %s\n", result);
        PyErr_Print();
-   } else 
-   {
+   } else {
        PyErr_Print();
    }
 
   Py_Finalize();
+  return result;
 }
 
 void IP_logger(int fd){
 
 	struct sockaddr_in addr;
 	socklen_t addr_size = sizeof(struct sockaddr_in);
-	int res = getpeername(fd, (struct sockaddr *)&addr, &addr_size);
+	getpeername(fd, (struct sockaddr *)&addr, &addr_size);
 	char *dotAddr = malloc(sizeof(char)*20);
 	dotAddr = strdup(inet_ntoa(addr.sin_addr));
 	char buffer[80];
@@ -125,17 +126,17 @@ void *thread_func(void *args)
         if (read(connfd, request, 4096) <= 0) {
             break;
         } else {
+            printf("************\n");
             printf("Recieved:\n%s", request);
         }
-
-        printf("********************\nQuality: %f\n***************\n", find_quality(request, "image/webp"));
-        exec_pycode("Mozilla/5.0 (Linux; Android 6.0.1; Nexus 6P Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.83 Mobile Safari/537.36");
+        
         char *resource = parse_resource(request);
 
         char header[200];
         char requestedResource[200], filename[200];
         char type[20];
         int code;
+        int q, w, h;    //Requested quality, width and heigth of the screen
         char message[20];
 
         if (!strcmp(resource, "/")) {
@@ -144,6 +145,8 @@ void *thread_func(void *args)
             strcpy(requestedResource, resource + 1);
             strcpy(filename, requestedResource);
         }
+
+
 
         int fd = open(filename, O_RDONLY);
         if (fd == -1) {
@@ -155,6 +158,26 @@ void *thread_func(void *args)
             code = 200;
             strcpy(message, "OK");
             strcpy(type, find_type(filename));
+
+            if(strstr(SUPPORTED_CONVERSION_TYPES, type) != NULL) {
+                char *user_agent = find_line(request, "User-Agent: ");
+                char *tmp, *tmpw, *tmph;
+
+                q = find_quality(request, type);
+                tmp = exec_pycode(user_agent);
+
+                tmpw = strtok(tmp, "-");
+                tmph = strtok(NULL, "-");
+
+                printf("Converting %s\n", filename);
+                w = atoi(tmpw);
+                printf("Width: %d\n", w);
+                h = atoi(tmph);
+                printf("Height: %d\n", h);
+
+                printf("Quality for %s: %d-%d q = %d", filename, w, h, q);
+
+            }
         }
     
         struct stat stat_buf;
@@ -171,7 +194,6 @@ void *thread_func(void *args)
                 break;
             }
         }
-        printf("\n*******************\n");
         close(fd);
     }
     if (close(connfd) < 0) {

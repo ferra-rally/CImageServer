@@ -6,3 +6,4 @@ server:
 	$(CROSS_COMPILE) -g *.c $(LIBS) $(CFLAGS) -o server
 clean:
 	rm -f server
+	rm logFile.txt

@@ -8,8 +8,6 @@ def resolve_ua(ua):
 	x = parsed_json['device']
 
 	return_string = "{}-{}".format(x['screenpixelswidth'], x['screenpixelsheight'])
-	print("Sono il pitone")
-	print(return_string)
 
 	return return_string
 

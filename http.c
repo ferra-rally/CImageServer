@@ -17,9 +17,13 @@ char *find_method(char *header) {
 }
 
 char *find_line(char *header, char *target) {
-    char *tmp, *dest;
+    char *tmpheader, *tmp, *dest;
 
-    tmp = strstr(header, target);
+    tmpheader = malloc(strlen(header));
+
+    strcpy(tmpheader, header);
+
+    tmp = strstr(tmpheader, target);
 
     if(tmp != NULL) {
         dest = strtok(tmp, "\n");
@@ -47,7 +51,7 @@ float find_quality(char *buff, char *extension) {
 
     strcpy(header, buff);
 
-    if (strstr(header, "Accept:") == NULL) {
+    if (strstr(header, "Accept: ") == NULL) {
         perror("Error: Header does not containt accept");
         return -1;
     }
@@ -76,7 +80,7 @@ float find_quality(char *buff, char *extension) {
     return 1;
 }
 
-char *parse_resource(char *buff, char *params) {
+char *parse_resource(char *buff) {
     char *header = malloc(strlen(buff));
     char *resource;
     char *firstline;
