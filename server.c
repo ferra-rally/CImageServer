@@ -22,8 +22,11 @@
 #define PORT 8080
 #define SERVER_NAME "CServi"
 #define SERVER_VERSION "0.2"
+
+#ifdef IMAGE_CONVERTION
 #define CACHE_LOCATION "imagecache"
 #define SUPPORTED_CONVERSION_TYPES "image/jpg, image/jpeg, image/png"
+#endif
 
 #define handle_error(msg) \
     do {logOnFile(1,msg);perror(msg); exit(EXIT_FAILURE); } while (0)
@@ -62,6 +65,7 @@ void pipe_handle(int sig_num, siginfo_t *sig_info, void *context){
 	printf("PIPE\n");
 }
 
+#ifdef IMAGE_CONVERTION
 char* exec_pycode(char* ua) {
     PyObject *pName, *pModule, *pDict, *pFunc, *pValue, *presult;
     char *result;
@@ -95,6 +99,7 @@ if (PyCallable_Check(pFunc))
   Py_Finalize();
   return result;
 }
+#endif
 
 void IP_logger(int fd){
 
@@ -137,8 +142,10 @@ void *thread_func(void *args)
         char requestedResource[200], filename[200];
         char type[20];
         int code;
+#ifdef IMAGE_CONVERTION
         int w, h;    //Requested quality, width and heigth of the screen
         float q;
+#endif
         char message[20];
 
         if (!strcmp(resource, "/")) {
@@ -160,7 +167,7 @@ void *thread_func(void *args)
             code = 200;
             strcpy(message, "OK");
             strcpy(type, find_type(filename));
-
+#ifdef IMAGE_CONVERTION
             if(strstr(SUPPORTED_CONVERSION_TYPES, type) != NULL) {
                 char *user_agent = find_line(request, "User-Agent: ");
                 char *tmp, *tmpw, *tmph;
@@ -211,6 +218,7 @@ void *thread_func(void *args)
                     }
                 }
             }
+#endif
         }
     
         struct stat stat_buf;
@@ -241,7 +249,8 @@ int main() {
     struct sockaddr_in servaddr, cli;
 
     struct sigaction act;
-    struct stat st;
+
+#ifdef IMAGE_CONVERTION
 
     // Set environment variable for python
     char pythonpath[512];
@@ -255,9 +264,7 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    //setup logfile
-	int lfd = open("logFile.txt", O_WRONLY | O_CREAT | O_APPEND, 0644);
-
+    struct stat st;
     int sr;
     if ((sr = stat(CACHE_LOCATION, &st)) == -1 && errno == ENOENT) {
         if (mkdir(CACHE_LOCATION, 0755) == -1)
@@ -265,9 +272,13 @@ int main() {
     } else if (sr == -1) {
         handle_error("stat");
     } else if (!S_ISDIR(st.st_mode)) {
-        printf("Remove file '%s' from folder containgin server\n", CACHE_LOCATION);
+        printf("Remove file '%s' from folder containing server\n", CACHE_LOCATION);
         return -1;
     }
+#endif
+
+    //setup logfile
+	int lfd = open("logFile.txt", O_WRONLY | O_CREAT | O_APPEND, 0644);
 
 	if(lfd == -1){
 		//non uso l' handle perchè nell handle scriviamo l' errore nel logfile 
