@@ -243,8 +243,17 @@ int main() {
     struct sigaction act;
     struct stat st;
 
-    //set environment variable for python
-    //system("export PYTHONPATH=$PYTHONPATH:pwd");
+    // Set environment variable for python
+    char pythonpath[512];
+    char *p = secure_getenv("PYTHONPATH");
+    if (p)
+        snprintf(pythonpath, 512, "PYTHONPATH=%s:pwd", secure_getenv("PYTHONPATH"));
+    else
+        snprintf(pythonpath, 512, "PYTHONPATH=:pwd");
+    if (putenv(pythonpath) == -1) {
+        printf("Error setting PYTHONPATH environment variable\n");
+        exit(EXIT_FAILURE);
+    }
 
     //setup logfile
 	int lfd = open("logFile.txt", O_WRONLY | O_CREAT | O_APPEND, 0644);
