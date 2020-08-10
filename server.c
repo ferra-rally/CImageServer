@@ -21,8 +21,9 @@
 
 #define PORT 8080
 #define SERVER_NAME "CServi"
-#define SERVER_VERSION "0.1"
-#define SUPPORTED_CONVERSION_TYPES "image/jpg, image/jpeg"
+#define SERVER_VERSION "0.2"
+#define CACHE_LOCATION "imagecache"
+#define SUPPORTED_CONVERSION_TYPES "image/jpg, image/jpeg, image/png"
 
 #define handle_error(msg) \
     do {logOnFile(1,msg);perror(msg); exit(EXIT_FAILURE); } while (0)
@@ -136,7 +137,8 @@ void *thread_func(void *args)
         char requestedResource[200], filename[200];
         char type[20];
         int code;
-        int q, w, h;    //Requested quality, width and heigth of the screen
+        int w, h;    //Requested quality, width and heigth of the screen
+        float q;
         char message[20];
 
         if (!strcmp(resource, "/")) {
@@ -162,28 +164,59 @@ void *thread_func(void *args)
             if(strstr(SUPPORTED_CONVERSION_TYPES, type) != NULL) {
                 char *user_agent = find_line(request, "User-Agent: ");
                 char *tmp, *tmpw, *tmph;
-
+                char filename_conv[512];
+                struct stat sb;
+            
                 q = find_quality(request, type);
                 tmp = exec_pycode(user_agent);
 
                 tmpw = strtok(tmp, "-");
                 tmph = strtok(NULL, "-");
 
-                printf("Converting %s\n", filename);
                 w = atoi(tmpw);
-                printf("Width: %d\n", w);
                 h = atoi(tmph);
-                printf("Height: %d\n", h);
 
-                printf("Quality for %s: %d-%d q = %d", filename, w, h, q);
+                //printf("Quality for %s: %d-%d q = %d", filename, w, h, q);
 
+                // Add condition for different cases
+                //q = 0.1;
+
+                if(h != 0 && w != 0) {
+                    if(q == 1) {
+                        sprintf(filename_conv, "%s/%d-%d-%s", CACHE_LOCATION, h, w, filename);
+                    } else {
+                        sprintf(filename_conv, "%s/%d-%d-%2.0f-%s", CACHE_LOCATION, h, w, q * 100, filename);
+                    }
+                    
+                    if (stat(filename_conv, &sb) == -1) {
+                        if(resize(filename, filename_conv, w, h, q*100) != EXIT_SUCCESS) perror("Error resizing image\n");
+                    }
+
+                    close(fd);
+                    fd = open(filename_conv, O_RDONLY);
+                    if(fd == -1) {
+                        perror("File not found\n");
+                    }
+                } else if(q != 1) {
+                    sprintf(filename_conv, "%s/%2.0f-%s", CACHE_LOCATION, q * 100, filename);
+                    
+                    if (stat(filename_conv, &sb) == -1) {
+                        if (change_quality(filename, filename_conv, q*100) != EXIT_SUCCESS) perror("Error changing quality of image\n");
+                    }
+
+                    close(fd);
+                    fd = open(filename_conv, O_RDONLY);
+                    if(fd == -1) {
+                        perror("File not found\n");
+                    }
+                }
             }
         }
     
         struct stat stat_buf;
         fstat(fd, &stat_buf);
 
-        sprintf(header, "HTTP/1.1 %d %s\r\nContent-length: %ld\r\nContent-Type: %s\r\n\r\n", code, message, stat_buf.st_size, type);
+        sprintf(header, "HTTP/1.1 %d %s\r\nContent-length: %ld\r\nServer: %s version %s\r\nContent-Type: %s\r\n\r\n", code, message, stat_buf.st_size, SERVER_NAME, SERVER_VERSION, type);
 
         if (write(connfd, header, strlen(header)) <= 0) {
             break;
@@ -208,14 +241,25 @@ int main() {
     struct sockaddr_in servaddr, cli;
 
     struct sigaction act;
+    struct stat st;
 
     //set environment variable for python
     //system("export PYTHONPATH=$PYTHONPATH:pwd");
 
-
-
     //setup logfile
-	int lfd = open("logFile.txt", O_WRONLY | O_CREAT | O_APPEND);
+	int lfd = open("logFile.txt", O_WRONLY | O_CREAT | O_APPEND, 0644);
+
+    int sr;
+    if ((sr = stat(CACHE_LOCATION, &st)) == -1 && errno == ENOENT) {
+        if (mkdir(CACHE_LOCATION, 0755) == -1)
+            handle_error("mkdir");
+    } else if (sr == -1) {
+        handle_error("stat");
+    } else if (!S_ISDIR(st.st_mode)) {
+        printf("Remove file '%s' from folder containgin server\n", CACHE_LOCATION);
+        return -1;
+    }
+
 	if(lfd == -1){
 		//non uso l' handle perchè nell handle scriviamo l' errore nel logfile 
 		printf("Error opening logFile\n");
