@@ -1,5 +1,3 @@
-#include <python3.8/Python.h>
-#include <python3.8/pythonrun.h>
 #include <stdio.h> 
 #include <netinet/in.h> 
 #include <stdlib.h> 
@@ -13,38 +11,29 @@
 #include <sys/sendfile.h>
 #include <signal.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <time.h>
 
 #include "http.h"
 #include "list.h"
-#include "convert.h"
-#include "jsmn.h"
 
 #define PORT 8080
 #define SERVER_NAME "CServi"
 #define SERVER_VERSION "0.2"
 
 #ifdef IMAGE_CONVERTION
+#include <errno.h>
+#include "jsmn.h"
+#include "convert.h"
 #define CACHE_LOCATION "imagecache"
 #define SUPPORTED_CONVERSION_TYPES "image/jpg, image/jpeg, image/png"
+#define HTTP_PORT 80
+#define RESPONSE_SIZE 4096
+#define GET_STRING "GET /api/v4/AQQNX4o82B8DTRY62Eg.json?user-agent=%s HTTP/1.1\r\nHost: cloud.51degrees.com\r\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:79.0) Gecko/20100101 Firefox/79.0\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\r\nAccept-Language: it-IT,it;q=0.8,en-US;q=0.5,en;q=0.3\r\nAccept-Encoding: gzip, deflate, br\r\nConnection: close\r\n\r\n"
 #endif
 
 
-//TODO exmaple string - remove this
-static const char *JSON_STRING =
-    "{\"device\":[\"screenpixelswidth\":1440, \"screenpixelsheight\":2560]}";
-
-//TO THIS
-
 FILE *logFile;
-
-static int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
-  if (tok->type == JSMN_STRING && (int)strlen(s) == tok->end - tok->start &&
-      strncmp(json + tok->start, s, tok->end - tok->start) == 0) {
-    return 0;
-  }
-  return -1;
-}
 
 void logOnFile(int flag, char *msg){
 	time_t rawtime; 
@@ -83,46 +72,21 @@ void pipe_handle(/*int sig_num, siginfo_t *sig_info, void *context*/){
 	printf("PIPE\n");
 }
 
+
 #ifdef IMAGE_CONVERTION
-char* exec_pycode(char* ua) {
-    PyObject *pName, *pModule, *pDict, *pFunc, *pValue, *presult;
-    char *result;
 
-  Py_Initialize();
-  pName = PyUnicode_FromString((char*)"resolveus");
-  pModule = PyImport_Import(pName);
-  if(pModule == NULL) {
-      printf("NULL mymodule\n");
-      return "";
+static int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
+  if (tok->type == JSMN_STRING && (int)strlen(s) == tok->end - tok->start &&
+      strncmp(json + tok->start, s, tok->end - tok->start) == 0) {
+    return 0;
   }
-  pDict = PyModule_GetDict(pModule);
-  pFunc = PyDict_GetItemString(pDict, "resolve_ua");
-  if(pFunc == NULL) {
-      printf("No Function\n");
-  }
-  
-
-if (PyCallable_Check(pFunc))
-   {
-       pValue=Py_BuildValue("(z)", ua);
-       PyErr_Print();
-       presult=PyObject_CallObject(pFunc,pValue);    
-       result = PyUnicode_AsUTF8(presult);
-       //printf("Valore di ritorno in C %s\n", result);
-       PyErr_Print();
-   } else {
-       PyErr_Print();
-   }
-
-  Py_Finalize();
-  return result;
+  return -1;
 }
-#endif
 
 int parse_json(char *json, char *dest) {
 
     jsmn_parser p;
-    jsmntok_t t[128]; /* We expect no more than 128 JSON tokens */
+    jsmntok_t t[128];
 
     jsmn_init(&p);
     int r = jsmn_parse(&p, json, strlen(json), t, 128);
@@ -131,7 +95,7 @@ int parse_json(char *json, char *dest) {
     for (i = 1; i < r; i++) {
         if (jsoneq(json, &t[i], "screenpixelswidth") == 0) {
             w = 0;
-            if(JSON_STRING + t[i + 1].start != NULL) {
+            if(json + t[i + 1].start != NULL) {
                 w = atoi(json + t[i + 1].start);
             }
 
@@ -149,6 +113,44 @@ int parse_json(char *json, char *dest) {
     sprintf(dest, "%d-%d", w, h);
     return 1;
 }
+
+void request_size(char *user_agent, char *result) {
+    int sock_ds;
+	struct sockaddr_in server_addr;
+    struct hostent *hp;
+
+    if ((sock_ds = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
+	    handle_error("socket");	
+
+	memset(&server_addr, '\0', sizeof(server_addr));
+
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_port = htons(HTTP_PORT);
+
+    if ((hp = gethostbyname("cloud.51degrees.com")) == NULL)
+        handle_error("gethostbyname");
+
+    memcpy(&server_addr.sin_addr, hp->h_addr, 4);
+
+    if (connect(sock_ds, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1)
+        handle_error("connect");
+
+    char request[RESPONSE_SIZE];
+    snprintf(request, RESPONSE_SIZE, GET_STRING, user_agent);
+    printf("%s", GET_STRING);
+    printf("%s\n", request);
+
+    write(sock_ds, request, strlen(request) + 1);
+    char response[RESPONSE_SIZE];
+    memset(response, 0, RESPONSE_SIZE);
+    read(sock_ds, response, RESPONSE_SIZE);
+    shutdown(sock_ds, SHUT_RDWR); 
+	close(sock_ds);
+
+    parse_json(strstr(response, "\r\n\r\n"), result);
+}
+
+#endif
 
 void IP_logger(int fd){
 
@@ -223,12 +225,13 @@ void *thread_func(void *args)
             if (strstr(SUPPORTED_CONVERSION_TYPES, type) != NULL) {
                 char user_agent[size];
                 find_line(request, "User-Agent: ", user_agent);
-                char *tmp, *tmpw, *tmph;
+                char tmp[20];
+                char *tmpw, *tmph;
                 char filename_conv[512];
                 struct stat sb;
             
                 q = find_quality(request, type);
-                tmp = exec_pycode(user_agent);
+                request_size(user_agent, tmp);
 
                 tmpw = strtok(tmp, "-");
                 tmph = strtok(NULL, "-");
@@ -304,25 +307,8 @@ int main() {
     struct sockaddr_in servaddr, cli;
 
     struct sigaction act;
-
-    /*
-    char json[20];
-    parse_json(JSON_STRING, json);
-    printf("Example JSON: %s\n", json);
-    */
+    
 #ifdef IMAGE_CONVERTION
-
-    // Set environment variable for python
-    char pythonpath[512];
-    char *p = secure_getenv("PYTHONPATH");
-    if (p)
-        snprintf(pythonpath, 512, "PYTHONPATH=%s:pwd", secure_getenv("PYTHONPATH"));
-    else
-        snprintf(pythonpath, 512, "PYTHONPATH=:pwd");
-    if (putenv(pythonpath) == -1) {
-        printf("Error setting PYTHONPATH environment variable\n");
-        exit(EXIT_FAILURE);
-    }
 
     struct stat st;
     int sr;

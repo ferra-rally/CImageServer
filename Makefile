@@ -1,7 +1,7 @@
 .PHONY: server server_conv clean
 CROSS_COMPILE ?= gcc
 LIBS = -lpthread
-CFLAGS = -Wall -Wextra -I/usr/include/python3.8 -lpython3.8 #-Werror
+CFLAGS = -Wall -Wextra #-Werror
 server:
 	$(CROSS_COMPILE) *.c $(LIBS) $(CFLAGS) -o server
 server_conv:
