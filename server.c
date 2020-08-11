@@ -182,7 +182,7 @@ void *thread_func(void *args)
             break;
         } else {
             printf("************\n");
-            printf("Recieved:\n%s", request);
+            printf("Recieved:\n-%s-", request);
         }
 
         size_t size = strlen(request) + 1;

@@ -64,7 +64,6 @@ float find_quality(char *buff, char *extension)
         x = strstr(accept_string, "*/*");
     } else {
         x = strstr(tmp, extension);
-        printf("Not Default %s\n", x);
     }
 
     target_quality = strtok(x, ",\n");
@@ -72,7 +71,6 @@ float find_quality(char *buff, char *extension)
     qstring = strstr(target_quality, "q=");
 
     if (qstring != NULL) {
-        printf("TARGET: %s\n", qstring);
         qstring = qstring + 2;
         return atof(qstring);
     }
@@ -85,12 +83,21 @@ void parse_resource(char *buff, char *result)
     size_t size = strlen(buff) + 1;
     char header[size];
     char *firstline;
+    char *res;
 
     strncpy(header, buff, size);
 
     firstline = strtok(header, "\n");
+    if(firstline == NULL) {
+        return;
+    }
+
     strtok(firstline, " ");
-    strncpy(result, strtok(NULL, " ?"), size);
+    res = strtok(NULL, " ?");
+    if(res == NULL) {
+        return;
+    }
+    strncpy(result, res, size);
     //strtok(NULL, " ?");
 }
 
@@ -103,8 +110,6 @@ void find_type(char *buff, char *result)
     strncpy(temp, buff, size);
     strtok(temp, ".");
     type = strtok(NULL, ".");
-
-    printf("Found type: %s\n", type);
 
     if (!strcmp(type, "jpg")) {
         strncpy(result, "image/jpg", size);
