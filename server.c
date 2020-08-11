@@ -284,7 +284,7 @@ int main() {
 #endif
 
     //setup logfile
-	int lfd = open("logFile.txt", O_WRONLY | O_CREAT | O_APPEND, 0644);
+	int lfd = open("logFile.log", O_WRONLY | O_CREAT | O_APPEND, 0644);
 
 	if(lfd == -1){
 		//non uso l' handle perchè nell handle scriviamo l' errore nel logfile 
