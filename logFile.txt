@@ -1,6 +1,0 @@
-CONNECTION: Client addr 127.0.0.1 -- 08/10/20 - 11:55AM
-CONNECTION: Client addr 127.0.0.1 -- 08/10/20 - 11:56AM
-CONNECTION: Client addr 127.0.0.1 -- 08/10/20 - 11:56AM
-CONNECTION: Client addr 127.0.0.1 -- 08/10/20 - 11:56AM
-CONNECTION: Client addr 127.0.0.1 -- 08/10/20 - 11:56AM
-CONNECTION: Client addr 127.0.0.1 -- 08/10/20 - 11:56AM

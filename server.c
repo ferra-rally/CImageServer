@@ -135,8 +135,11 @@ void *thread_func(void *args)
             printf("************\n");
             printf("Recieved:\n%s", request);
         }
+
+        size_t size = strlen(request) + 1;
         
-        char *resource = parse_resource(request);
+        char resource[size];
+        parse_resource(request, resource);
 
         char header[200];
         char requestedResource[200], filename[200];
@@ -166,10 +169,11 @@ void *thread_func(void *args)
         } else {
             code = 200;
             strcpy(message, "OK");
-            strcpy(type, find_type(filename));
+            find_type(filename, type);
 #ifdef IMAGE_CONVERTION
-            if(strstr(SUPPORTED_CONVERSION_TYPES, type) != NULL) {
-                char *user_agent = find_line(request, "User-Agent: ");
+            if (strstr(SUPPORTED_CONVERSION_TYPES, type) != NULL) {
+                char user_agent[size];
+                find_line(request, "User-Agent: ", user_agent);
                 char *tmp, *tmpw, *tmph;
                 char filename_conv[512];
                 struct stat sb;
@@ -230,7 +234,9 @@ void *thread_func(void *args)
             break;
         }
 
-        if (!strcmp(find_method(request), "GET")) {
+        char method[size];
+        find_method(request, method);
+        if (!strcmp(method, "GET")) {
             if (sendfile(connfd, fd, NULL, stat_buf.st_size) <= 0) {
                 break;
             }

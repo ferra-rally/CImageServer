@@ -3,47 +3,46 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct Header_line {
-    char *line;
-    struct Header_line *next;
-};
+void find_method(char *header, char *result)
+{
+    size_t size = strlen(header) + 1;
+    char tmp[size];
 
-char *find_method(char *header) {
-    char *tmp = malloc(strlen(header));
+    strncpy(tmp, header, size);
 
-    strcpy(tmp, header);
-
-    return strtok(tmp, " ");
+    strncpy(result, strtok(tmp, " "), size);
 }
 
-char *find_line(char *header, char *target) {
-    char *tmpheader, *tmp, *dest;
+void find_line(char *header, char *target, char *result)
+{
+    char *tmp, *dest;
+    size_t size = strlen(header) + 1;
+    char tmpheader[size];
 
-    tmpheader = malloc(strlen(header));
-
-    strcpy(tmpheader, header);
+    strncpy(tmpheader, header, size);
 
     tmp = strstr(tmpheader, target);
 
-    if(tmp != NULL) {
-        dest = strtok(tmp, "\n");
-        return dest;
+    if (tmp != NULL) {
+        strncpy(result, strtok(tmp, "\n"), size);
     } else {
-        return "";
+        strncpy(result, "", size);
     }
 }
 
-int connection_status(char *header) {
-    if(strstr(header, "Connection: keep-alive") != NULL) {
+int connection_status(char *header)
+{
+    if (strstr(header, "Connection: keep-alive") != NULL) {
         return 1;
     } else {
         return 0;
     }
 }
 
-float find_quality(char *buff, char *extension) {
-    char *header = malloc(strlen(buff));
-    char *accept_string;
+float find_quality(char *buff, char *extension)
+{
+    size_t size = strlen(buff) + 1;
+    char header[size];
     char *tmp;
     char *target_quality;
     char *qstring;
@@ -57,10 +56,11 @@ float find_quality(char *buff, char *extension) {
     }
 
     
-    accept_string = find_line(header, "Accept: ");
+    char accept_string[size];
+    find_line(header, "Accept: ", accept_string);
 
     tmp = strstr(accept_string, extension);
-    if(tmp == NULL) {
+    if (tmp == NULL) {
         x = strstr(accept_string, "*/*");
     } else {
         x = strstr(tmp, extension);
@@ -71,7 +71,7 @@ float find_quality(char *buff, char *extension) {
 
     qstring = strstr(target_quality, "q=");
 
-    if(qstring != NULL) {
+    if (qstring != NULL) {
         printf("TARGET: %s\n", qstring);
         qstring = qstring + 2;
         return atof(qstring);
@@ -80,39 +80,38 @@ float find_quality(char *buff, char *extension) {
     return 1;
 }
 
-char *parse_resource(char *buff) {
-    char *header = malloc(strlen(buff));
+void parse_resource(char *buff, char *result)
+{
+    size_t size = strlen(buff) + 1;
+    char header[size];
     char *resource;
     char *firstline;
 
-    strcpy(header, buff);
+    strncpy(header, buff, size);
 
     firstline = strtok(header, "\n");
     strtok(firstline, " ");
-    resource = strtok(NULL, " ?");
+    strncpy(result, strtok(NULL, " ?"), size);
     //strtok(NULL, " ?");
-
-    return resource;
 }
 
-char *find_type(char *buff)
+void find_type(char *buff, char *result)
 {
+    size_t size = strlen(buff) + 1;
     char *type;
-    char *temp;
+    char temp[size];
 
-    temp = malloc(strlen(buff));
-
-    strcpy(temp, buff);
+    strncpy(temp, buff, size);
     strtok(temp, ".");
     type = strtok(NULL, ".");
 
     printf("Found type: %s\n", type);
 
     if (!strcmp(type, "jpg")) {
-        return "image/jpg";
+        strncpy(result, "image/jpg", size);
     } else if (!strcmp(type, "html")) {
-        return "text/html";
+        strncpy(result, "text/html", size);
+    } else {
+        strncpy(result, type, size);
     }
-    
-    return type;
 }

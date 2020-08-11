@@ -1,6 +1,6 @@
 float find_quality(char *buff, char *extension);
-char *parse_resource(char *buff);
-char *find_type(char *buff);
-char *find_method(char *header);
+void parse_resource(char *buff, char *result);
+void find_type(char *buff, char *result);
+void find_method(char *header, char *result);
 int connection_status(char *header);
-char *find_line(char *header, char *target);
+void find_line(char *header, char *target, char *result);
