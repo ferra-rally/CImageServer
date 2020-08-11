@@ -15,7 +15,7 @@ void find_method(char *header, char *result)
 
 void find_line(char *header, char *target, char *result)
 {
-    char *tmp, *dest;
+    char *tmp;
     size_t size = strlen(header) + 1;
     char tmpheader[size];
 
@@ -84,7 +84,6 @@ void parse_resource(char *buff, char *result)
 {
     size_t size = strlen(buff) + 1;
     char header[size];
-    char *resource;
     char *firstline;
 
     strncpy(header, buff, size);

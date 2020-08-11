@@ -29,9 +29,6 @@
 #define SUPPORTED_CONVERSION_TYPES "image/jpg, image/jpeg, image/png"
 #endif
 
-#define handle_error(msg) \
-    do {logOnFile(1,msg);perror(msg); exit(EXIT_FAILURE); } while (0)
-
 
 //TODO exmaple string - remove this
 static const char *JSON_STRING =
@@ -74,8 +71,13 @@ void logOnFile(int flag, char *msg){
 	fflush(logFile);
 }
 
+void  handle_error(char *msg){
+    logOnFile(1,msg);
+    perror(msg); 
+    exit(EXIT_FAILURE);
+}
 
-void pipe_handle(int sig_num, siginfo_t *sig_info, void *context){
+void pipe_handle(/*int sig_num, siginfo_t *sig_info, void *context*/){
 	
 	logOnFile(2,"pipe handled\n");
 	printf("PIPE\n");
@@ -160,7 +162,7 @@ void IP_logger(int fd){
 	sprintf(buffer,"Client addr %s",dotAddr);
 
 	logOnFile(3,buffer);
-	printf("Client addr %s\n", dotAddr); // prints "10.0.0.1"
+	printf("Client addr %s\n", dotAddr); 
 	free(dotAddr);
 }
 
@@ -407,8 +409,6 @@ int main() {
 		handle_error("pthread_attr_init");
 	if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0)
 		handle_error("pthread_attr_setdetachstate");
-
-	struct sockaddr_in client_addr;
 
     while (1) {
         // Accept the data packet from client and verification 
