@@ -137,15 +137,17 @@ void request_size(char *user_agent, char *result) {
 
     char request[RESPONSE_SIZE];
     snprintf(request, RESPONSE_SIZE, GET_STRING, user_agent);
-    printf("%s", GET_STRING);
     printf("%s\n", request);
 
     write(sock_ds, request, strlen(request) + 1);
     char response[RESPONSE_SIZE];
     memset(response, 0, RESPONSE_SIZE);
     read(sock_ds, response, RESPONSE_SIZE);
+
     shutdown(sock_ds, SHUT_RDWR); 
 	close(sock_ds);
+
+    printf("%s\n", response);
 
     parse_json(strstr(response, "\r\n\r\n"), result);
 }
@@ -224,7 +226,7 @@ void *thread_func(void *args)
 #ifdef IMAGE_CONVERTION
             if (strstr(SUPPORTED_CONVERSION_TYPES, type) != NULL) {
                 char user_agent[size];
-                find_line(request, "User-Agent: ", user_agent);
+                find_user_agent(request, user_agent);
                 char tmp[20];
                 char *tmpw, *tmph;
                 char filename_conv[512];

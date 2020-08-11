@@ -30,6 +30,23 @@ void find_line(char *header, char *target, char *result)
     }
 }
 
+void find_user_agent(char *header, char *result)
+{
+    size_t size = strlen(header) + 1;
+    char user_agent[size];
+    find_line(header, "User-Agent: ", user_agent);
+    user_agent[strlen(user_agent) - 1] = 0;
+    strtok(user_agent, " ");
+    strcpy(result, strtok(NULL, " "));
+
+    char *tmp = strtok(NULL, " ");
+    while (tmp != NULL) {
+        strcat(result, "%20");
+        strcat(result, tmp);
+        tmp = strtok(NULL, " ");
+    }
+}
+
 int connection_status(char *header)
 {
     if (strstr(header, "Connection: keep-alive") != NULL) {
