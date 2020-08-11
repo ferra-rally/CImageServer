@@ -18,6 +18,7 @@
 #include "http.h"
 #include "list.h"
 #include "convert.h"
+#include "jsmn.h"
 
 #define PORT 8080
 #define SERVER_NAME "CServi"
@@ -31,7 +32,22 @@
 #define handle_error(msg) \
     do {logOnFile(1,msg);perror(msg); exit(EXIT_FAILURE); } while (0)
 
+
+//TODO exmaple string - remove this
+static const char *JSON_STRING =
+    "{\"device\":[\"screenpixelswidth\":1440, \"screenpixelsheight\":2560]}";
+
+//TO THIS
+
 FILE *logFile;
+
+static int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
+  if (tok->type == JSMN_STRING && (int)strlen(s) == tok->end - tok->start &&
+      strncmp(json + tok->start, s, tok->end - tok->start) == 0) {
+    return 0;
+  }
+  return -1;
+}
 
 void logOnFile(int flag, char *msg){
 	time_t rawtime; 
@@ -100,6 +116,37 @@ if (PyCallable_Check(pFunc))
   return result;
 }
 #endif
+
+int parse_json(char *json, char *dest) {
+
+    jsmn_parser p;
+    jsmntok_t t[128]; /* We expect no more than 128 JSON tokens */
+
+    jsmn_init(&p);
+    int r = jsmn_parse(&p, json, strlen(json), t, 128);
+    int i, h, w;
+
+    for (i = 1; i < r; i++) {
+        if (jsoneq(json, &t[i], "screenpixelswidth") == 0) {
+            w = 0;
+            if(JSON_STRING + t[i + 1].start != NULL) {
+                w = atoi(json + t[i + 1].start);
+            }
+
+            i++;
+        } else if (jsoneq(json, &t[i], "screenpixelsheight") == 0) {
+            h = 0;
+            if(json + t[i + 1].start != NULL) {
+                h = atoi(json + t[i + 1].start);
+            }
+
+            i++;
+        }
+    }
+
+    sprintf(dest, "%d-%d", w, h);
+    return 1;
+}
 
 void IP_logger(int fd){
 
@@ -256,6 +303,11 @@ int main() {
 
     struct sigaction act;
 
+    /*
+    char json[20];
+    parse_json(JSON_STRING, json);
+    printf("Example JSON: %s\n", json);
+    */
 #ifdef IMAGE_CONVERTION
 
     // Set environment variable for python
