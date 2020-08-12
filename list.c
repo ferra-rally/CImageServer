@@ -3,12 +3,15 @@
 #include <stdlib.h>
 #include "list.h"
 
-#define handle_error(msg) \
-    do { perror(msg); exit(EXIT_FAILURE); } while (0)
+#define handle_error(msg)                                              \
+	do {                                                               \
+		perror(msg);                                                   \
+		exit(EXIT_FAILURE);                                            \
+	} while (0)
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 struct client *last = NULL;
-struct client *clients = NULL; 
+struct client *clients = NULL;
 
 struct client *append_node(int conn_id)
 {
