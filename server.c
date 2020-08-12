@@ -14,6 +14,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <time.h>
+#include <inttypes.h>
 
 #include "http.h"
 #include "list.h"
@@ -31,7 +32,6 @@
 #define RESPONSE_SIZE 4096
 #define GET_STRING "GET /api/v4/AQQNX4o82B8DTRY62Eg.json?user-agent=%s HTTP/1.1\r\nHost: cloud.51degrees.com\r\nUser-Agent: CServi/0.2 Linux x86_64\r\nAccept: application/json\r\nConnection: close\r\n\r\n"
 #endif
-
 
 FILE *logFile;
 
@@ -313,7 +313,28 @@ void *thread_func(void *args)
     pthread_exit(NULL);
 }
 
-int main() {
+uint16_t parse_input(int argc, char *argv[])
+{
+	if (argc < 2) {
+		return PORT;
+	} else if (argc > 2) {
+		return 0;
+	} else {
+		char *end;
+		intmax_t val = strtoimax(argv[1], &end, 10);
+		if (errno == ERANGE || errno == EINVAL || val < 1 || val > UINT16_MAX || *end != '\0')
+			return 0;
+		return (uint16_t)val;
+	}
+}
+
+int main(int argc, char *argv[]) {
+    uint16_t port = parse_input(argc, argv);
+	if (port == 0) {
+		printf("Usage: command [port]\n");
+		return -1;
+	}
+
     int sockfd, connfd, len;
     struct sockaddr_in servaddr, cli;
 
@@ -375,7 +396,7 @@ int main() {
     // Assign IP, PORT 
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port = htons(PORT);
+    servaddr.sin_port = htons(port);
   
     // Bind newly created socket to given IP and verification 
     if ((bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr))) != 0) {
