@@ -3,6 +3,7 @@
 #include <stdlib.h> 
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <pthread.h>
@@ -22,53 +23,54 @@
 #define SERVER_VERSION "0.2"
 
 #ifdef IMAGE_CONVERTION
-#include <errno.h>
 #include "jsmn.h"
 #include "convert.h"
 #define CACHE_LOCATION "imagecache"
 #define SUPPORTED_CONVERSION_TYPES "image/jpg, image/jpeg, image/png"
 #define HTTP_PORT 80
 #define RESPONSE_SIZE 4096
-#define GET_STRING "GET /api/v4/AQQNX4o82B8DTRY62Eg.json?user-agent=%s HTTP/1.1\r\nHost: cloud.51degrees.com\r\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:79.0) Gecko/20100101 Firefox/79.0\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\r\nAccept-Language: it-IT,it;q=0.8,en-US;q=0.5,en;q=0.3\r\nAccept-Encoding: gzip, deflate, br\r\nConnection: close\r\n\r\n"
+#define GET_STRING "GET /api/v4/AQQNX4o82B8DTRY62Eg.json?user-agent=%s HTTP/1.1\r\nHost: cloud.51degrees.com\r\nUser-Agent: CServi/0.2 Linux x86_64\r\nAccept: application/json\r\nConnection: close\r\n\r\n"
 #endif
 
 
 FILE *logFile;
 
-void logOnFile(int flag, char *msg){
-	time_t rawtime; 
-	struct tm *info; 
-	char buffer[80]; 
-	time(&rawtime); 
+void logOnFile(int flag, char *msg) {
+	time_t rawtime;
+	struct tm *info;
+	char buffer[80];
+	time(&rawtime);
 	char tag[80];
 
-	switch(flag){
+	info = localtime(&rawtime);
+	strftime(buffer, 80, "%x - %I:%M%p", info);
+
+	switch(flag) {
 		case 1:
 			strcpy(tag, "ERROR");
+            fprintf(logFile, "%s: %s: %s -- %s\n", tag, msg, strerror(errno), buffer);
 			break;
 		case 2:
 			strcpy(tag, "PIPE");
+            fprintf(logFile, "%s: %s -- %s\n", tag, msg, buffer);
 			break;
 		case 3:
 			strcpy(tag, "CONNECTION");
+            fprintf(logFile, "%s: %s -- %s\n", tag, msg, buffer);
 			break;
 	}
 
-	info = localtime(&rawtime); 
-	strftime(buffer,80,"%x - %I:%M%p",info); 
-	fprintf(logFile, "%s: %s -- %s\n", tag,msg, buffer); 
 	fflush(logFile);
 }
 
-void  handle_error(char *msg){
-    logOnFile(1,msg);
+void  handle_error(char *msg) {
+    logOnFile(1, msg);
     perror(msg); 
     exit(EXIT_FAILURE);
 }
 
-void pipe_handle(/*int sig_num, siginfo_t *sig_info, void *context*/){
-	
-	logOnFile(2,"pipe handled\n");
+void pipe_handle(/*int sig_num, siginfo_t *sig_info, void *context*/) {
+	logOnFile(2, "pipe handled\n");
 	printf("PIPE\n");
 }
 
@@ -95,14 +97,14 @@ int parse_json(char *json, char *dest) {
     for (i = 1; i < r; i++) {
         if (jsoneq(json, &t[i], "screenpixelswidth") == 0) {
             w = 0;
-            if(json + t[i + 1].start != NULL) {
+            if (json + t[i + 1].start != NULL) {
                 w = atoi(json + t[i + 1].start);
             }
 
             i++;
         } else if (jsoneq(json, &t[i], "screenpixelsheight") == 0) {
             h = 0;
-            if(json + t[i + 1].start != NULL) {
+            if (json + t[i + 1].start != NULL) {
                 h = atoi(json + t[i + 1].start);
             }
 
@@ -139,13 +141,20 @@ void request_size(char *user_agent, char *result) {
     snprintf(request, RESPONSE_SIZE, GET_STRING, user_agent);
     printf("%s\n", request);
 
-    write(sock_ds, request, strlen(request) + 1);
+    if (write(sock_ds, request, strlen(request) + 1) <= 0) {
+        close(sock_ds);
+        return;
+    }
+    
     char response[RESPONSE_SIZE];
     memset(response, 0, RESPONSE_SIZE);
-    read(sock_ds, response, RESPONSE_SIZE);
 
-    shutdown(sock_ds, SHUT_RDWR); 
-	close(sock_ds);
+    if (read(sock_ds, response, RESPONSE_SIZE) <= 0) {
+        close(sock_ds);
+        return;
+    }
+
+    close(sock_ds);
 
     printf("%s\n", response);
 
@@ -246,23 +255,23 @@ void *thread_func(void *args)
                 // Add condition for different cases
                 //q = 0.1;
 
-                if(h != 0 && w != 0) {
-                    if(q == 1) {
+                if (h != 0 && w != 0) {
+                    if (q == 1) {
                         sprintf(filename_conv, "%s/%d-%d-%s", CACHE_LOCATION, h, w, filename);
                     } else {
                         sprintf(filename_conv, "%s/%d-%d-%2.0f-%s", CACHE_LOCATION, h, w, q * 100, filename);
                     }
                     
                     if (stat(filename_conv, &sb) == -1) {
-                        if(resize(filename, filename_conv, w, h, q*100) != EXIT_SUCCESS) perror("Error resizing image\n");
+                        if (resize(filename, filename_conv, w, h, q*100) != EXIT_SUCCESS) perror("Error resizing image\n");
                     }
 
                     close(fd);
                     fd = open(filename_conv, O_RDONLY);
-                    if(fd == -1) {
+                    if (fd == -1) {
                         perror("File not found\n");
                     }
-                } else if(q != 1) {
+                } else if (q != 1) {
                     sprintf(filename_conv, "%s/%2.0f-%s", CACHE_LOCATION, q * 100, filename);
                     
                     if (stat(filename_conv, &sb) == -1) {
@@ -271,7 +280,7 @@ void *thread_func(void *args)
 
                     close(fd);
                     fd = open(filename_conv, O_RDONLY);
-                    if(fd == -1) {
+                    if (fd == -1) {
                         perror("File not found\n");
                     }
                 }
@@ -328,18 +337,17 @@ int main() {
     //setup logfile
 	int lfd = open("logFile.log", O_WRONLY | O_CREAT | O_APPEND, 0644);
 
-	if(lfd == -1){
+	if (lfd == -1){
 		//non uso l' handle perchè nell handle scriviamo l' errore nel logfile 
 		printf("Error opening logFile\n");
 		exit(EXIT_FAILURE);
 	}
 
 	logFile = fdopen(lfd, "w");
-	if(logFile == NULL){
+	if (logFile == NULL){
 		printf("Error fdopening logFile\n");
 		exit(EXIT_FAILURE);
 	}
-
 
 	// Set SIGPIPE handler
 	memset(&act, 0, sizeof(act));
