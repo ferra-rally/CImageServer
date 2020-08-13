@@ -27,7 +27,8 @@
 #include "jsmn.h"
 #include "convert.h"
 #define CACHE_LOCATION "imagecache"
-#define SUPPORTED_CONVERSION_TYPES "image/jpg, image/jpeg, image/png, image/webp"
+#define SUPPORTED_CONVERSION_TYPES                                             \
+	"image/jpg, image/jpeg, image/png, image/webp"
 #define HTTP_PORT 80
 #define RESPONSE_SIZE 4096
 #define GET_STRING                                                             \
@@ -182,7 +183,7 @@ void IP_logger(int fd)
 	sprintf(buffer, "Client addr %s", dotAddr);
 
 	logOnFile(3, buffer);
-	printf("Client addr %s\n", dotAddr);
+	//printf("Client addr %s\n", dotAddr);
 	free(dotAddr);
 }
 
@@ -192,17 +193,16 @@ void *thread_func(void *args)
 	struct client *client = (struct client *)args;
 	int connfd = client->conn_id;
 
-	printf("thread %lu alive\n", pthread_self());
+	//printf("thread %lu alive\n", pthread_self());
 
 	while (1) {
 		memset(request, 0, sizeof(request));
 
 		if (read(connfd, request, 4096) <= 0) {
 			break;
-		} else {
-			printf("************\n");
-			printf("Recieved:\n-%s-", request);
 		}
+		//printf("************\n");
+		//printf("Recieved:\n-%s-", request);
 
 		size_t size = strlen(request) + 1;
 
@@ -466,7 +466,7 @@ int main(int argc, char *argv[])
 			exit(0);
 		} else {
 			IP_logger(connfd);
-			printf("server acccept the client...\n");
+			//printf("server acccepted the client...\n");
 		}
 
 		// Set socket options
