@@ -61,7 +61,7 @@ float find_quality(char *buff, char *extension)
 	size_t size = strlen(buff) + 1;
 	char header[size];
 	char *tmp;
-    char *imagetmp;
+	char *imagetmp;
 	char *target_quality;
 	char *qstring;
 	char *x;
@@ -78,15 +78,15 @@ float find_quality(char *buff, char *extension)
 	tmp = strstr(accept_string, extension);
 
 	if (tmp != NULL) {
-        x = strstr(tmp, extension);
-    } else if((imagetmp = strstr(accept_string, "image/*")) != NULL) {
-        x = imagetmp;
-    } else {
-        x = strstr(accept_string, "*/*");
-        if(x == NULL) {
-            return 1;
-        }
-    }
+		x = strstr(tmp, extension);
+	} else if ((imagetmp = strstr(accept_string, "image/*")) != NULL) {
+		x = imagetmp;
+	} else {
+		x = strstr(accept_string, "*/*");
+		if (x == NULL) {
+			return 1;
+		}
+	}
 
 	target_quality = strtok(x, ",\n");
 
@@ -132,6 +132,9 @@ void find_type(char *buff, char *result)
 	strncpy(temp, buff, size);
 	strtok(temp, ".");
 	type = strtok(NULL, ".");
+	if (type == NULL) {
+		strncpy(result, "text/html", size);
+	}
 
 	if (!strcmp(type, "jpg")) {
 		strncpy(result, "image/jpg", size);
