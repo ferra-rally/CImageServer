@@ -133,21 +133,21 @@ void find_type(char *buff, char *result)
 	strtok(temp, ".");
 	type = strtok(NULL, ".");
 	if (type == NULL) {
-		strncpy(result, "text/html", size);
+		strcpy(result, "text/html");
 		return;
 	}
 
 	if (!strcmp(type, "jpg")) {
-		strncpy(result, "image/jpg", size);
+		strcpy(result, "image/jpg");
 	} else if (!strcmp(type, "html")) {
-		strncpy(result, "text/html", size);
+		strcpy(result, "text/html");
 	} else if (!strcmp(type, "webp")) {
-		strncpy(result, "image/webp", size);
+		strcpy(result, "image/webp");
 	} else if (!strcmp(type, "jpeg")) {
-		strncpy(result, "image/jpeg", size);
+		strcpy(result, "image/jpeg");
 	} else if (!strcmp(type, "png")) {
-		strncpy(result, "image/png", size);
+		strcpy(result, "image/png");
 	} else {
-		strncpy(result, type, size);
+		strcpy(result, type);
 	}
 }
