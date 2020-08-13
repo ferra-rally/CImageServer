@@ -71,13 +71,11 @@ void handle_error(char *msg)
 {
 	logOnFile(1, msg);
 	perror(msg);
-	exit(EXIT_FAILURE);
 }
 
-void pipe_handle(/*int sig_num, siginfo_t *sig_info, void *context*/)
+void pipe_handler(/*int sig_num, siginfo_t *sig_info, void *context*/)
 {
 	logOnFile(2, "pipe handled\n");
-	printf("PIPE\n");
 }
 
 #ifdef IMAGE_CONVERTION
@@ -129,22 +127,28 @@ void request_size(char *user_agent, char *result)
 	struct sockaddr_in server_addr;
 	struct hostent *hp;
 
-	if ((sock_ds = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
-		handle_error("socket");
+	if ((sock_ds = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
+		sprintf(result, "0-0");
+		return;
+	}
 
 	memset(&server_addr, '\0', sizeof(server_addr));
 
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(HTTP_PORT);
 
-	if ((hp = gethostbyname("cloud.51degrees.com")) == NULL)
-		handle_error("gethostbyname");
+	if ((hp = gethostbyname("cloud.51degrees.com")) == NULL) {
+		sprintf(result, "0-0");
+		return;
+	}
 
 	memcpy(&server_addr.sin_addr, hp->h_addr, 4);
 
 	if (connect(sock_ds, (struct sockaddr *)&server_addr,
-		    sizeof(server_addr)) == -1)
-		handle_error("connect");
+		    sizeof(server_addr)) == -1) {
+		sprintf(result, "0-0");
+		return;
+	}
 
 	char request[RESPONSE_SIZE];
 	snprintf(request, RESPONSE_SIZE, GET_STRING, user_agent);
@@ -152,6 +156,7 @@ void request_size(char *user_agent, char *result)
 
 	if (write(sock_ds, request, strlen(request) + 1) <= 0) {
 		close(sock_ds);
+		sprintf(result, "0-0");
 		return;
 	}
 
@@ -160,6 +165,7 @@ void request_size(char *user_agent, char *result)
 
 	if (read(sock_ds, response, RESPONSE_SIZE) <= 0) {
 		close(sock_ds);
+		sprintf(result, "0-0");
 		return;
 	}
 
@@ -178,6 +184,9 @@ void IP_logger(int fd)
 	socklen_t addr_size = sizeof(struct sockaddr_in);
 	getpeername(fd, (struct sockaddr *)&addr, &addr_size);
 	char *dotAddr = strdup(inet_ntoa(addr.sin_addr));
+	if (dotAddr == NULL)
+		handle_error("strdup");
+
 	char buffer[80];
 
 	sprintf(buffer, "Client addr %s", dotAddr);
@@ -277,14 +286,14 @@ void *thread_func(void *args)
 							   filename_conv, w, h,
 							   q * 100) !=
 						    EXIT_SUCCESS)
-							perror("Error resizing image\n");
+							handle_error("resize");
 					}
 
 					close(fd);
 					fd = open(filename_conv, O_RDONLY);
-					if (fd == -1) {
-						perror("File not found\n");
-					}
+					if (fd == -1)
+						handle_error("open");
+
 				} else if (q != 1) {
 					sprintf(filename_conv, "%s/%2.0f-%s",
 						CACHE_LOCATION, q * 100,
@@ -295,14 +304,14 @@ void *thread_func(void *args)
 								   filename_conv,
 								   q * 100) !=
 						    EXIT_SUCCESS)
-							perror("Error changing quality of image\n");
+							handle_error(
+								"change_quality");
 					}
 
 					close(fd);
 					fd = open(filename_conv, O_RDONLY);
-					if (fd == -1) {
-						perror("File not found\n");
-					}
+					if (fd == -1)
+						handle_error("open");
 				}
 			}
 #endif
@@ -331,9 +340,9 @@ void *thread_func(void *args)
 		}
 		close(fd);
 	}
-	if (close(connfd) < 0) {
-		printf("Error closing socket\n");
-	}
+	if (close(connfd) < 0)
+		handle_error("close");
+
 	remove_node(client);
 	pthread_exit(NULL);
 }
@@ -372,10 +381,13 @@ int main(int argc, char *argv[])
 	struct stat st;
 	int sr;
 	if ((sr = stat(CACHE_LOCATION, &st)) == -1 && errno == ENOENT) {
-		if (mkdir(CACHE_LOCATION, 0755) == -1)
-			handle_error("mkdir");
+		if (mkdir(CACHE_LOCATION, 0755) == -1) {
+			perror("mkdir");
+			exit(EXIT_FAILURE);
+		}
 	} else if (sr == -1) {
-		handle_error("stat");
+		perror("stat");
+		exit(EXIT_FAILURE);
 	} else if (!S_ISDIR(st.st_mode)) {
 		printf("Remove file '%s' from folder containing server\n",
 		       CACHE_LOCATION);
@@ -387,39 +399,42 @@ int main(int argc, char *argv[])
 	int lfd = open("logFile.log", O_WRONLY | O_CREAT | O_APPEND, 0644);
 
 	if (lfd == -1) {
-		//non uso l' handle perchè nell handle scriviamo l' errore nel logfile
-		printf("Error opening logFile\n");
+		perror("open");
 		exit(EXIT_FAILURE);
 	}
 
 	logFile = fdopen(lfd, "w");
 	if (logFile == NULL) {
-		printf("Error fdopening logFile\n");
+		perror("fdopen");
 		exit(EXIT_FAILURE);
 	}
 
 	// Set SIGPIPE handler
 	memset(&act, 0, sizeof(act));
-	act.sa_sigaction = pipe_handle;
+	act.sa_sigaction = pipe_handler;
 	act.sa_flags = SA_SIGINFO;
 
 	if (sigaction(SIGPIPE, &act, NULL) < 0) {
 		handle_error("sigaction");
+		exit(EXIT_FAILURE);
 	}
 
 	// Socket creation and verification
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
-	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &(int){ 1 },
-		       sizeof(int)) < 0)
-		handle_error("setsockopt(SO_REUSEADDR) failed");
-
 	if (sockfd == -1) {
-		printf("socket creation failed...\n");
-		exit(0);
+		handle_error("socket");
+		exit(EXIT_FAILURE);
 	} else {
 		printf("Socket successfully created..\n");
 	}
+
+	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &(int){ 1 },
+		       sizeof(int)) < 0) {
+		handle_error("setsockopt");
+		exit(EXIT_FAILURE);
+	}
+
 	memset(&servaddr, 0, sizeof(struct sockaddr_in));
 
 	// Assign IP, PORT
@@ -430,8 +445,8 @@ int main(int argc, char *argv[])
 	// Bind newly created socket to given IP and verification
 	if ((bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr))) !=
 	    0) {
-		handle_error("Bind failed");
-		exit(0);
+		handle_error("bind");
+		exit(EXIT_FAILURE);
 	} else {
 		printf("Socket successfully binded..\n");
 	}
@@ -439,8 +454,8 @@ int main(int argc, char *argv[])
 	// Now server is ready to listen and verification
 	if ((listen(sockfd, 5)) != 0) {
 		//printf("Listen failed...\n");
-		handle_error("Listen failed...");
-		exit(0);
+		handle_error("listen");
+		exit(EXIT_FAILURE);
 	} else {
 		printf("Server listening..\n");
 	}
@@ -452,18 +467,21 @@ int main(int argc, char *argv[])
 	timeout.tv_usec = 0;
 
 	pthread_attr_t attr;
-	if (pthread_attr_init(&attr) != 0)
+	if (pthread_attr_init(&attr) != 0) {
 		handle_error("pthread_attr_init");
-	if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0)
+		exit(EXIT_FAILURE);
+	}
+	if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0) {
 		handle_error("pthread_attr_setdetachstate");
+		exit(EXIT_FAILURE);
+	}
 
 	while (1) {
 		// Accept the data packet from client and verification
 		connfd = accept(sockfd, (struct sockaddr *)&cli,
 				(socklen_t *)&len);
 		if (connfd < 0) {
-			printf("server acccept failed...\n");
-			exit(0);
+			handle_error("accept");
 		} else {
 			IP_logger(connfd);
 			//printf("server acccepted the client...\n");
@@ -472,12 +490,16 @@ int main(int argc, char *argv[])
 		// Set socket options
 		if (setsockopt(connfd, SOL_SOCKET, SO_RCVTIMEO,
 			       (void *)&timeout,
-			       (socklen_t)sizeof(timeout)) == -1)
+			       (socklen_t)sizeof(timeout)) == -1) {
 			handle_error("setsockopt");
+			exit(EXIT_FAILURE);
+		}
 		if (setsockopt(connfd, SOL_SOCKET, SO_SNDTIMEO,
 			       (void *)&timeout,
-			       (socklen_t)sizeof(timeout)) == -1)
+			       (socklen_t)sizeof(timeout)) == -1) {
 			handle_error("setsockopt");
+			exit(EXIT_FAILURE);
+		}
 
 		// Pass connfd to thread
 		pthread_t tid;

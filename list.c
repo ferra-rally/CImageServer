@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include "list.h"
 
-#define handle_error(msg)                                              \
-	do {                                                               \
+#define handle_error(msg)                                                      \
+	do {                                                                   \
 		perror(msg);                                                   \
 		exit(EXIT_FAILURE);                                            \
 	} while (0)
