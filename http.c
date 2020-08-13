@@ -134,6 +134,7 @@ void find_type(char *buff, char *result)
 	type = strtok(NULL, ".");
 	if (type == NULL) {
 		strncpy(result, "text/html", size);
+		return;
 	}
 
 	if (!strcmp(type, "jpg")) {

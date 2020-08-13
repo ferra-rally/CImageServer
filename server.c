@@ -452,7 +452,7 @@ int main(int argc, char *argv[])
 	}
 
 	// Now server is ready to listen and verification
-	if ((listen(sockfd, 5)) != 0) {
+	if ((listen(sockfd, SOMAXCONN)) != 0) {
 		//printf("Listen failed...\n");
 		handle_error("listen");
 		exit(EXIT_FAILURE);
@@ -463,7 +463,11 @@ int main(int argc, char *argv[])
 
 	// Initialize timeout structure to 300 seconds
 	struct timeval timeout;
-	timeout.tv_sec = 300;
+#ifdef IMAGE_CONVERTION
+	timeout.tv_sec = 60;
+#else
+	timeout.tv_sec = 15;
+#endif
 	timeout.tv_usec = 0;
 
 	pthread_attr_t attr;
