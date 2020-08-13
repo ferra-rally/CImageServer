@@ -73,9 +73,15 @@ void handle_error(char *msg)
 	perror(msg);
 }
 
-void pipe_handler(/*int sig_num, siginfo_t *sig_info, void *context*/)
+void pipe_handler()
 {
 	logOnFile(2, "pipe handled\n");
+}
+
+void sigint_handler()
+{
+	fclose(logFile);
+	exit(0);
 }
 
 #ifdef IMAGE_CONVERTION
@@ -375,6 +381,7 @@ int main(int argc, char *argv[])
 	struct sockaddr_in servaddr, cli;
 
 	struct sigaction act;
+	struct sigaction act1;
 
 #ifdef IMAGE_CONVERTION
 
@@ -418,6 +425,17 @@ int main(int argc, char *argv[])
 		handle_error("sigaction");
 		exit(EXIT_FAILURE);
 	}
+
+	//set SIGINT handler
+	memset(&act, 0, sizeof(act));
+	act1.sa_sigaction = sigint_handler;
+	act1.sa_flags = SA_SIGINFO;
+
+	if(sigaction(SIGINT, &act1, NULL) < 0){
+		handle_error("sigaction");
+		exit(EXIT_FAILURE);
+	} 
+
 
 	// Socket creation and verification
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
