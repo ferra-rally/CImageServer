@@ -31,7 +31,7 @@
 #define HTTP_PORT 80
 #define RESPONSE_SIZE 4096
 #define GET_STRING                                                             \
-	"GET /api/v4/AQQNX4o82B8DTRY62Eg.json?user-agent=%s HTTP/1.1\r\nHost: cloud.51degrees.com\r\nUser-Agent: CServi/0.2 Linux x86_64\r\nAccept: application/json\r\nConnection: close\r\n\r\n"
+	"GET /api/v4/AQQNX4o8JjxVn2M_2Eg.json?user-agent=%s HTTP/1.1\r\nHost: cloud.51degrees.com\r\nUser-Agent: CServi/0.2 Linux x86_64\r\nAccept: application/json\r\nConnection: close\r\n\r\n"
 #endif
 
 FILE *logFile;
