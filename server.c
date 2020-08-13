@@ -427,7 +427,7 @@ int main(int argc, char *argv[])
 	}
 
 	//set SIGINT handler
-	memset(&act, 0, sizeof(act));
+	memset(&act1, 0, sizeof(act));
 	act1.sa_sigaction = sigint_handler;
 	act1.sa_flags = SA_SIGINFO;
 
