@@ -61,6 +61,7 @@ float find_quality(char *buff, char *extension)
 	size_t size = strlen(buff) + 1;
 	char header[size];
 	char *tmp;
+    char *imagetmp;
 	char *target_quality;
 	char *qstring;
 	char *x;
@@ -68,19 +69,24 @@ float find_quality(char *buff, char *extension)
 	strcpy(header, buff);
 
 	if (strstr(header, "Accept: ") == NULL) {
-		perror("Error: Header does not containt accept");
-		return -1;
+		return 1;
 	}
 
 	char accept_string[size];
 	find_line(header, "Accept: ", accept_string);
 
 	tmp = strstr(accept_string, extension);
-	if (tmp == NULL) {
-		x = strstr(accept_string, "*/*");
-	} else {
-		x = strstr(tmp, extension);
-	}
+
+	if (tmp != NULL) {
+        x = strstr(tmp, extension);
+    } else if((imagetmp = strstr(accept_string, "image/*")) != NULL) {
+        x = imagetmp;
+    } else {
+        x = strstr(accept_string, "*/*");
+        if(x == NULL) {
+            return 1;
+        }
+    }
 
 	target_quality = strtok(x, ",\n");
 
@@ -131,6 +137,12 @@ void find_type(char *buff, char *result)
 		strncpy(result, "image/jpg", size);
 	} else if (!strcmp(type, "html")) {
 		strncpy(result, "text/html", size);
+	} else if (!strcmp(type, "webp")) {
+		strncpy(result, "image/webp", size);
+	} else if (!strcmp(type, "jpeg")) {
+		strncpy(result, "image/jpeg", size);
+	} else if (!strcmp(type, "png")) {
+		strncpy(result, "image/png", size);
 	} else {
 		strncpy(result, type, size);
 	}

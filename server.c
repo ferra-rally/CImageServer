@@ -27,7 +27,7 @@
 #include "jsmn.h"
 #include "convert.h"
 #define CACHE_LOCATION "imagecache"
-#define SUPPORTED_CONVERSION_TYPES "image/jpg, image/jpeg, image/png"
+#define SUPPORTED_CONVERSION_TYPES "image/jpg, image/jpeg, image/png, image/webp"
 #define HTTP_PORT 80
 #define RESPONSE_SIZE 4096
 #define GET_STRING                                                             \
@@ -147,7 +147,7 @@ void request_size(char *user_agent, char *result)
 
 	char request[RESPONSE_SIZE];
 	snprintf(request, RESPONSE_SIZE, GET_STRING, user_agent);
-	printf("%s\n", request);
+	//printf("%s\n", request);
 
 	if (write(sock_ds, request, strlen(request) + 1) <= 0) {
 		close(sock_ds);
@@ -164,7 +164,7 @@ void request_size(char *user_agent, char *result)
 
 	close(sock_ds);
 
-	printf("%s\n", response);
+	//printf("%s\n", response);
 
 	parse_json(strstr(response, "\r\n\r\n"), result);
 }
