@@ -33,6 +33,8 @@
 #define RESPONSE_SIZE 4096
 #define GET_STRING                                                             \
 	"GET /api/v4/AQQNX4o8JjxVn2M_2Eg.json?user-agent=%s HTTP/1.1\r\nHost: cloud.51degrees.com\r\nUser-Agent: CServi/0.2 Linux x86_64\r\nAccept: application/json\r\nConnection: close\r\n\r\n"
+
+char *ipaddr;
 #endif
 
 FILE *logFile;
@@ -103,18 +105,18 @@ int parse_json(char *json, char *dest)
 
 	jsmn_init(&p);
 	int r = jsmn_parse(&p, json, strlen(json), t, 128);
-	int i, h, w;
+	int i;
+	int h = 0;
+	int w = 0;
 
 	for (i = 1; i < r; i++) {
 		if (jsoneq(json, &t[i], "screenpixelswidth") == 0) {
-			w = 0;
 			if (json + t[i + 1].start != NULL) {
 				w = atoi(json + t[i + 1].start);
 			}
 
 			i++;
 		} else if (jsoneq(json, &t[i], "screenpixelsheight") == 0) {
-			h = 0;
 			if (json + t[i + 1].start != NULL) {
 				h = atoi(json + t[i + 1].start);
 			}
@@ -129,9 +131,13 @@ int parse_json(char *json, char *dest)
 
 void request_size(char *user_agent, char *result)
 {
+	if (ipaddr == NULL) {
+		sprintf(result, "0-0");
+		return;
+	}
+
 	int sock_ds;
 	struct sockaddr_in server_addr;
-	struct hostent *hp;
 
 	if ((sock_ds = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
 		sprintf(result, "0-0");
@@ -143,12 +149,7 @@ void request_size(char *user_agent, char *result)
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(HTTP_PORT);
 
-	if ((hp = gethostbyname("cloud.51degrees.com")) == NULL) {
-		sprintf(result, "0-0");
-		return;
-	}
-
-	memcpy(&server_addr.sin_addr, hp->h_addr, 4);
+	memcpy(&server_addr.sin_addr, ipaddr, 4);
 
 	if (connect(sock_ds, (struct sockaddr *)&server_addr,
 		    sizeof(server_addr)) == -1) {
@@ -158,7 +159,6 @@ void request_size(char *user_agent, char *result)
 
 	char request[RESPONSE_SIZE];
 	snprintf(request, RESPONSE_SIZE, GET_STRING, user_agent);
-	//printf("%s\n", request);
 
 	if (write(sock_ds, request, strlen(request) + 1) <= 0) {
 		close(sock_ds);
@@ -176,8 +176,6 @@ void request_size(char *user_agent, char *result)
 	}
 
 	close(sock_ds);
-
-	//printf("%s\n", response);
 
 	parse_json(strstr(response, "\r\n\r\n"), result);
 }
@@ -496,6 +494,22 @@ int main(int argc, char *argv[])
 		handle_error("pthread_attr_setdetachstate");
 		exit(EXIT_FAILURE);
 	}
+
+#ifdef IMAGE_CONVERTION
+	ipaddr = (char *)calloc(4, 1);
+	if (ipaddr == NULL) {
+		handle_error("calloc");
+		exit(EXIT_FAILURE);
+	}
+
+	struct hostent *hp;
+	if ((hp = gethostbyname("cloud.51degrees.com")) == NULL) {
+		free(ipaddr);
+		ipaddr = NULL;
+	} else {
+		memcpy(ipaddr, hp->h_addr, 4);
+	}
+#endif
 
 	while (1) {
 		// Accept the data packet from client and verification
