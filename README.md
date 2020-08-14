@@ -1,2 +1,2 @@
 # CImageServer
-Image Transfomation server in C
+ HTTP Server implemented in C with image transformation capability. 
