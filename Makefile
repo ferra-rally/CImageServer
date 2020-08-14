@@ -1,7 +1,7 @@
 .PHONY: server server_conv clean
 CROSS_COMPILE ?= gcc
 LIBS = -lpthread
-CFLAGS = -Wall -Wextra -O3 -Wno-stringop-overflow -Werror
+CFLAGS = -Wall -Wextra -O3 #-Wno-stringop-overflow -Werror
 server:
 	$(CROSS_COMPILE) *.c $(LIBS) $(CFLAGS) -o server
 server_conv:
