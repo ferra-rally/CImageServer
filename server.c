@@ -256,15 +256,15 @@ void *thread_func(void *args)
 				char user_agent[size];
 				find_user_agent(request, user_agent);
 				char tmp[20];
-				char *tmpw, *tmph;
+				char *tmpw, *tmph, *saveptr;
 				char filename_conv[512];
 				struct stat sb;
 
 				q = find_quality(request, type);
 				request_size(user_agent, tmp);
 
-				tmpw = strtok(tmp, "-");
-				tmph = strtok(NULL, "-");
+				tmpw = strtok_r(tmp, "-", &saveptr);
+				tmph = strtok_r(NULL, "-", &saveptr);
 
 				w = atoi(tmpw);
 				h = atoi(tmph);
@@ -431,11 +431,10 @@ int main(int argc, char *argv[])
 	act1.sa_sigaction = sigint_handler;
 	act1.sa_flags = SA_SIGINFO;
 
-	if(sigaction(SIGINT, &act1, NULL) < 0){
+	if (sigaction(SIGINT, &act1, NULL) < 0) {
 		handle_error("sigaction");
 		exit(EXIT_FAILURE);
-	} 
-
+	}
 
 	// Socket creation and verification
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);

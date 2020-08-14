@@ -7,10 +7,11 @@ void find_method(char *header, char *result)
 {
 	size_t size = strlen(header) + 1;
 	char tmp[size];
+	char *saveptr;
 
 	strncpy(tmp, header, size);
 
-	strncpy(result, strtok(tmp, " "), size);
+	strncpy(result, strtok_r(tmp, " ", &saveptr), size);
 }
 
 void find_line(char *header, char *target, char *result)
@@ -18,13 +19,14 @@ void find_line(char *header, char *target, char *result)
 	char *tmp;
 	size_t size = strlen(header) + 1;
 	char tmpheader[size];
+	char *saveptr;
 
 	strncpy(tmpheader, header, size);
 
 	tmp = strstr(tmpheader, target);
 
 	if (tmp != NULL) {
-		strncpy(result, strtok(tmp, "\n"), size);
+		strncpy(result, strtok_r(tmp, "\n", &saveptr), size);
 	} else {
 		strncpy(result, "", size);
 	}
@@ -34,16 +36,17 @@ void find_user_agent(char *header, char *result)
 {
 	size_t size = strlen(header) + 1;
 	char user_agent[size];
+	char *saveptr;
 	find_line(header, "User-Agent: ", user_agent);
 	user_agent[strlen(user_agent) - 1] = 0;
-	strtok(user_agent, " ");
-	strcpy(result, strtok(NULL, " "));
+	strtok_r(user_agent, " ", &saveptr);
+	strcpy(result, strtok_r(NULL, " ", &saveptr));
 
-	char *tmp = strtok(NULL, " ");
+	char *tmp = strtok_r(NULL, " ", &saveptr);
 	while (tmp != NULL) {
 		strcat(result, "%20");
 		strcat(result, tmp);
-		tmp = strtok(NULL, " ");
+		tmp = strtok_r(NULL, " ", &saveptr);
 	}
 }
 
@@ -65,6 +68,7 @@ float find_quality(char *buff, char *extension)
 	char *target_quality;
 	char *qstring;
 	char *x;
+	char *saveptr;
 
 	strcpy(header, buff);
 
@@ -88,7 +92,7 @@ float find_quality(char *buff, char *extension)
 		}
 	}
 
-	target_quality = strtok(x, ",\n");
+	target_quality = strtok_r(x, ",\n", &saveptr);
 
 	qstring = strstr(target_quality, "q=");
 
@@ -106,16 +110,17 @@ void parse_resource(char *buff, char *result)
 	char header[size];
 	char *firstline;
 	char *res;
+	char *saveptr;
 
 	strncpy(header, buff, size);
 
-	firstline = strtok(header, "\n");
+	firstline = strtok_r(header, "\n", &saveptr);
 	if (firstline == NULL) {
 		return;
 	}
 
-	strtok(firstline, " ");
-	res = strtok(NULL, " ?");
+	strtok_r(firstline, " ", &saveptr);
+	res = strtok_r(NULL, " ?", &saveptr);
 	if (res == NULL) {
 		return;
 	}
@@ -127,11 +132,12 @@ void find_type(char *buff, char *result)
 {
 	size_t size = strlen(buff) + 1;
 	char *type;
+	char *saveptr;
 	char temp[size];
 
 	strncpy(temp, buff, size);
-	strtok(temp, ".");
-	type = strtok(NULL, ".");
+	strtok_r(temp, ".", &saveptr);
+	type = strtok_r(NULL, ".", &saveptr);
 	if (type == NULL) {
 		strcpy(result, "text/html");
 		return;
