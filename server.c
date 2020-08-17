@@ -13,6 +13,7 @@
 #include <signal.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <netinet/tcp.h>
 #include <time.h>
 #include <inttypes.h>
 
@@ -334,6 +335,12 @@ void *thread_func(void *args)
 			code, message, stat_buf.st_size, SERVER_NAME,
 			SERVER_VERSION, type);
 
+		if (setsockopt(connfd, IPPROTO_TCP, TCP_CORK, &(int){ 1 },
+			       sizeof(int)) == -1) {
+			close(fd);
+			break;
+		}
+
 		if (write(connfd, header, strlen(header)) <= 0) {
 			close(fd);
 			break;
@@ -347,6 +354,13 @@ void *thread_func(void *args)
 				break;
 			}
 		}
+
+		if (setsockopt(connfd, IPPROTO_TCP, TCP_CORK, &(int){ 0 },
+			       sizeof(int)) == -1) {
+			close(fd);
+			break;
+		}
+
 		close(fd);
 	}
 	if (close(connfd) < 0)
