@@ -37,6 +37,7 @@
 char *ipaddr;
 #endif
 
+int end = 0;
 FILE *logFile;
 
 void logOnFile(int flag, char *msg)
@@ -82,8 +83,12 @@ void pipe_handler()
 
 void sigint_handler()
 {
+	end = 1;
 	fclose(logFile);
-	exit(0);
+#ifdef IMAGE_CONVERTION
+	if (ipaddr != NULL)
+		free(ipaddr)
+#endif
 }
 
 #ifdef IMAGE_CONVERTION
@@ -375,7 +380,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	int sockfd, connfd, len;
+	int sockfd, connfd, len, en;
 	struct sockaddr_in servaddr, cli;
 
 	struct sigaction act;
@@ -486,11 +491,14 @@ int main(int argc, char *argv[])
 	timeout.tv_usec = 0;
 
 	pthread_attr_t attr;
-	if (pthread_attr_init(&attr) != 0) {
+	if ((en = pthread_attr_init(&attr)) != 0) {
+		errno = en;
 		handle_error("pthread_attr_init");
 		exit(EXIT_FAILURE);
 	}
-	if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0) {
+	if ((en = pthread_attr_setdetachstate(&attr,
+					      PTHREAD_CREATE_DETACHED)) != 0) {
+		errno = en;
 		handle_error("pthread_attr_setdetachstate");
 		exit(EXIT_FAILURE);
 	}
@@ -511,11 +519,13 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-	while (1) {
+	while (!end) {
 		// Accept the data packet from client and verification
 		connfd = accept(sockfd, (struct sockaddr *)&cli,
 				(socklen_t *)&len);
-		if (connfd < 0) {
+		if (connfd < 0 && errno == EINTR) {
+			break;
+		} else if (connfd < 0) {
 			handle_error("accept");
 		} else {
 			IP_logger(connfd);
@@ -538,12 +548,13 @@ int main(int argc, char *argv[])
 
 		// Pass connfd to thread
 		pthread_t tid;
-		if (pthread_create(&tid, &attr, thread_func,
-				   (void *)append_node(connfd)) != 0)
+		if ((en = pthread_create(&tid, &attr, thread_func,
+					 (void *)append_node(connfd))) != 0) {
+			errno = en;
 			handle_error("pthread_create");
+		}
 	}
 
-	close(connfd);
 	close(sockfd);
 
 	return 0;

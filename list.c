@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <errno.h>
 #include "list.h"
 
 #define handle_error(msg)                                                      \
@@ -22,8 +23,12 @@ struct client *append_node(int conn_id)
 	node->conn_id = conn_id;
 	node->next = NULL;
 
-	if (pthread_mutex_lock(&mutex) != 0)
+	int en;
+
+	if ((en = pthread_mutex_lock(&mutex)) != 0) {
+		errno = en;
 		handle_error("pthread_mutex_lock");
+	}
 
 	node->prev = last;
 	/* Append to client list in O(1) time by keeping
@@ -36,16 +41,21 @@ struct client *append_node(int conn_id)
 
 	last = node;
 
-	if (pthread_mutex_unlock(&mutex) != 0)
+	if ((en = pthread_mutex_unlock(&mutex)) != 0) {
+		errno = en;
 		handle_error("pthread_mutex_unlock");
+	}
 
 	return node;
 }
 
 void remove_node(struct client *node)
 {
-	if (pthread_mutex_lock(&mutex) != 0)
+	int en;
+	if ((en = pthread_mutex_lock(&mutex)) != 0) {
+		errno = en;
 		handle_error("pthread_mutex_unlock");
+	}
 
 	/* Remove from list in O(1) time by passing
 	 * reference to the node that should be removed
@@ -60,8 +70,10 @@ void remove_node(struct client *node)
 	else
 		clients = node->next;
 
-	if (pthread_mutex_unlock(&mutex) != 0)
+	if ((en = pthread_mutex_unlock(&mutex)) != 0) {
+		errno = en;
 		handle_error("pthread_mutex_unlock");
+	}
 
 	free(node);
 }
