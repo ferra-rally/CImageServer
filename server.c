@@ -38,9 +38,13 @@
 char *ipaddr;
 #endif
 
-int end = 0;
+#ifdef LOG
 FILE *logFile;
+#endif
 
+int end = 0;
+
+#ifdef LOG
 void logOnFile(int flag, char *msg)
 {
 	time_t rawtime;
@@ -70,22 +74,29 @@ void logOnFile(int flag, char *msg)
 
 	fflush(logFile);
 }
+#endif
 
 void handle_error(char *msg)
 {
+#ifdef LOG
 	logOnFile(1, msg);
+#endif
 	perror(msg);
 }
 
 void pipe_handler()
 {
+#ifdef LOG
 	logOnFile(2, "pipe handled\n");
+#endif
 }
 
 void sigint_handler()
 {
 	end = 1;
+#ifdef LOG
 	fclose(logFile);
+#endif
 #ifdef IMAGE_CONVERTION
 	if (ipaddr != NULL)
 		free(ipaddr)
@@ -188,6 +199,7 @@ void request_size(char *user_agent, char *result)
 
 #endif
 
+#ifdef LOG
 void IP_logger(int fd)
 {
 	struct sockaddr_in addr;
@@ -205,6 +217,7 @@ void IP_logger(int fd)
 	//printf("Client addr %s\n", dotAddr);
 	free(dotAddr);
 }
+#endif
 
 void *thread_func(void *args)
 {
@@ -419,6 +432,7 @@ int main(int argc, char *argv[])
 	}
 #endif
 
+#ifdef LOG
 	//setup logfile
 	int lfd = open("logFile.log", O_WRONLY | O_CREAT | O_APPEND, 0644);
 
@@ -432,6 +446,7 @@ int main(int argc, char *argv[])
 		perror("fdopen");
 		exit(EXIT_FAILURE);
 	}
+#endif
 
 	// Set SIGPIPE handler
 	memset(&act, 0, sizeof(act));
@@ -542,7 +557,9 @@ int main(int argc, char *argv[])
 		} else if (connfd < 0) {
 			handle_error("accept");
 		} else {
+#ifdef LOG
 			IP_logger(connfd);
+#endif
 			//printf("server acccepted the client...\n");
 		}
 
