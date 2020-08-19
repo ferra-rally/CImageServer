@@ -53,20 +53,24 @@ void logOnFile(int flag, char *msg)
 	time(&rawtime);
 	char tag[80];
 
+	//Retrieve current date-hour
 	info = localtime(&rawtime);
 	strftime(buffer, 80, "%x - %I:%M%p", info);
 
 	switch (flag) {
 	case 1:
+		//Log an error
 		strcpy(tag, "ERROR");
 		fprintf(logFile, "%s: %s: %s -- %s\n", tag, msg,
 			strerror(errno), buffer);
 		break;
 	case 2:
+		//Log pipe handle
 		strcpy(tag, "PIPE");
 		fprintf(logFile, "%s: %s -- %s\n", tag, msg, buffer);
 		break;
 	case 3:
+		//Log new connection
 		strcpy(tag, "CONNECTION");
 		fprintf(logFile, "%s: %s -- %s\n", tag, msg, buffer);
 		break;
@@ -95,6 +99,7 @@ void sigint_handler()
 {
 	end = 1;
 #ifdef LOG
+	//close logFile fd before exit
 	fclose(logFile);
 #endif
 #ifdef IMAGE_CONVERTION
@@ -115,6 +120,7 @@ static int jsoneq(const char *json, jsmntok_t *tok, const char *s)
 	return -1;
 }
 
+//parse 51degrees response
 int parse_json(char *json, char *dest)
 {
 	jsmn_parser p;
@@ -202,6 +208,7 @@ void request_size(char *user_agent, char *result)
 #ifdef LOG
 void IP_logger(int fd)
 {
+	//Retrieve client IP
 	struct sockaddr_in addr;
 	socklen_t addr_size = sizeof(struct sockaddr_in);
 	getpeername(fd, (struct sockaddr *)&addr, &addr_size);
@@ -214,7 +221,6 @@ void IP_logger(int fd)
 	sprintf(buffer, "Client addr %s", dotAddr);
 
 	logOnFile(3, buffer);
-	//printf("Client addr %s\n", dotAddr);
 	free(dotAddr);
 }
 #endif
@@ -225,16 +231,13 @@ void *thread_func(void *args)
 	struct client *client = (struct client *)args;
 	int connfd = client->conn_id;
 
-	//printf("thread %lu alive\n", pthread_self());
-
 	while (1) {
 		memset(request, 0, sizeof(request));
 
+		//get the request
 		if (read(connfd, request, 4096) <= 0) {
 			break;
 		}
-		//printf("************\n");
-		//printf("Recieved:\n-%s-", request);
 
 		size_t size = strlen(request) + 1;
 
@@ -283,13 +286,9 @@ void *thread_func(void *args)
 				tmpw = strtok_r(tmp, "-", &saveptr);
 				tmph = strtok_r(NULL, "-", &saveptr);
 
+				//parse JSON result to int
 				w = atoi(tmpw);
 				h = atoi(tmph);
-
-				//printf("Quality for %s: %d-%d q = %d", filename, w, h, q);
-
-				// Add condition for different cases
-				//q = 0.1;
 
 				if (h != 0 && w != 0) {
 					if (q == 1) {
@@ -305,14 +304,16 @@ void *thread_func(void *args)
 					}
 
 					if (stat(filename_conv, &sb) == -1) {
+						//cache miss
 						if (resize(filename,
 							   filename_conv, w, h,
 							   q * 100) !=
 						    EXIT_SUCCESS)
 							handle_error("resize");
 					}
-
+					//close original file
 					close(fd);
+					//open converted file
 					fd = open(filename_conv, O_RDONLY);
 					if (fd == -1)
 						handle_error("open");
@@ -323,6 +324,7 @@ void *thread_func(void *args)
 						filename);
 
 					if (stat(filename_conv, &sb) == -1) {
+						//cache miss
 						if (change_quality(filename,
 								   filename_conv,
 								   q * 100) !=
@@ -330,7 +332,7 @@ void *thread_func(void *args)
 							handle_error(
 								"change_quality");
 					}
-
+					//close original file
 					close(fd);
 					fd = open(filename_conv, O_RDONLY);
 					if (fd == -1)
@@ -348,6 +350,7 @@ void *thread_func(void *args)
 			code, message, stat_buf.st_size, SERVER_NAME,
 			SERVER_VERSION, type);
 
+		//Set cork option
 		if (setsockopt(connfd, IPPROTO_TCP, TCP_CORK, &(int){ 1 },
 			       sizeof(int)) == -1) {
 			close(fd);
@@ -367,7 +370,7 @@ void *thread_func(void *args)
 				break;
 			}
 		}
-
+		//flush socket
 		if (setsockopt(connfd, IPPROTO_TCP, TCP_CORK, &(int){ 0 },
 			       sizeof(int)) == -1) {
 			close(fd);
@@ -383,6 +386,7 @@ void *thread_func(void *args)
 	pthread_exit(NULL);
 }
 
+//Retrieve the optional port as param
 uint16_t parse_input(int argc, char *argv[])
 {
 	if (argc < 2) {
@@ -417,6 +421,7 @@ int main(int argc, char *argv[])
 
 	struct stat st;
 	int sr;
+	//create cache directory if not exists
 	if ((sr = stat(CACHE_LOCATION, &st)) == -1 && errno == ENOENT) {
 		if (mkdir(CACHE_LOCATION, 0755) == -1) {
 			perror("mkdir");
@@ -497,12 +502,11 @@ int main(int argc, char *argv[])
 		handle_error("bind");
 		exit(EXIT_FAILURE);
 	} else {
-		printf("Socket successfully binded..\n");
+		printf("Socket successfully bound..\n");
 	}
 
 	// Now server is ready to listen and verification
 	if ((listen(sockfd, SOMAXCONN)) != 0) {
-		//printf("Listen failed...\n");
 		handle_error("listen");
 		exit(EXIT_FAILURE);
 	} else {
@@ -510,7 +514,7 @@ int main(int argc, char *argv[])
 	}
 	len = sizeof(cli);
 
-	// Initialize timeout structure to 300 seconds
+	// Initialize timeout structure 
 	struct timeval timeout;
 #ifdef IMAGE_CONVERTION
 	timeout.tv_sec = 60;
@@ -538,7 +542,7 @@ int main(int argc, char *argv[])
 		handle_error("calloc");
 		exit(EXIT_FAILURE);
 	}
-
+	//Resolve 51degrees IP
 	struct hostent *hp;
 	if ((hp = gethostbyname("cloud.51degrees.com")) == NULL) {
 		free(ipaddr);
@@ -560,7 +564,6 @@ int main(int argc, char *argv[])
 #ifdef LOG
 			IP_logger(connfd);
 #endif
-			//printf("server acccepted the client...\n");
 		}
 
 		// Set socket options

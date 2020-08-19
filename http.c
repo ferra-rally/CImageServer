@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+//save the http method of the request in a result buffer
 void find_method(char *header, char *result)
 {
 	size_t size = strlen(header) + 1;
@@ -125,7 +126,6 @@ void parse_resource(char *buff, char *result)
 		return;
 	}
 	strncpy(result, res, size);
-	//strtok(NULL, " ?");
 }
 
 void find_type(char *buff, char *result)
@@ -139,6 +139,7 @@ void find_type(char *buff, char *result)
 	strtok_r(temp, ".", &saveptr);
 	type = strtok_r(NULL, ".", &saveptr);
 	if (type == NULL) {
+		//default if not found
 		strcpy(result, "text/html");
 		return;
 	}
