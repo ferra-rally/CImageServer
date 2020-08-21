@@ -40,6 +40,8 @@ char *ipaddr;
 
 #ifdef LOG
 FILE *logFile;
+// mutex to protect writes on log file
+pthread_mutex_t mutex_log = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 int end = 0;
@@ -52,6 +54,7 @@ void logOnFile(int flag, char *msg)
 	char buffer[80];
 	time(&rawtime);
 	char tag[80];
+	int en;
 
 	//Retrieve current date-hour
 	info = localtime(&rawtime);
@@ -61,22 +64,41 @@ void logOnFile(int flag, char *msg)
 	case 1:
 		//Log an error
 		strcpy(tag, "ERROR");
+
+		if((en = pthread_mutex_lock(&mutex_log)) != 0){
+			errno = en;
+			perror("pthread_mutex_lock");
+		}
 		fprintf(logFile, "%s: %s: %s -- %s\n", tag, msg,
-			strerror(errno), buffer);
+		strerror(errno), buffer);
 		break;
 	case 2:
 		//Log pipe handle
 		strcpy(tag, "PIPE");
+		if((en = pthread_mutex_lock(&mutex_log)) != 0){
+			errno = en;
+			perror("pthread_mutex_lock");
+		}
 		fprintf(logFile, "%s: %s -- %s\n", tag, msg, buffer);
 		break;
 	case 3:
 		//Log new connection
 		strcpy(tag, "CONNECTION");
+		if((en = pthread_mutex_lock(&mutex_log)) != 0){
+			errno = en;
+			perror("pthread_mutex_lock");
+		}
 		fprintf(logFile, "%s: %s -- %s\n", tag, msg, buffer);
 		break;
 	}
 
 	fflush(logFile);
+
+	if((en = pthread_mutex_unlock(&mutex_log)) != 0){
+			errno = en;
+			perror("pthread_mutex_unlock");
+		}
+
 }
 #endif
 
