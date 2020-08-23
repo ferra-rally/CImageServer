@@ -1,3 +1,5 @@
+#pragma once
+
 float find_quality(char *buff, char *extension);
 void parse_resource(char *buff, char *result);
 void find_type(char *buff, char *result);

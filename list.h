@@ -1,3 +1,5 @@
+#pragma once
+
 struct client {
 	int conn_id;
 	struct client *next;
