@@ -575,7 +575,7 @@ int main(int argc, char *argv[])
 #endif
 
 	while (!end) {
-		// Accept the data packet from client and verification
+		// Accept connections
 		connfd = accept(sockfd, (struct sockaddr *)&cli,
 				(socklen_t *)&len);
 		if (connfd < 0 && errno == EINTR) {
