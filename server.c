@@ -126,7 +126,7 @@ void sigint_handler()
 #endif
 #ifdef IMAGE_CONVERTION
 	if (ipaddr != NULL)
-		free(ipaddr)
+		free(ipaddr);
 #endif
 }
 
@@ -264,7 +264,7 @@ void *thread_func(void *args)
 		size_t size = strlen(request) + 1;
 
 		char resource[size];
-		parse_resource(request, resource);
+		parse_resource(request, resource, size);
 
 		char header[200];
 		char requestedResource[200], filename[200];
@@ -292,17 +292,17 @@ void *thread_func(void *args)
 		} else {
 			code = 200;
 			strcpy(message, "OK");
-			find_type(filename, type);
+			find_type(filename, type, 200);
 #ifdef IMAGE_CONVERTION
 			if (strstr(SUPPORTED_CONVERSION_TYPES, type) != NULL) {
 				char user_agent[size];
-				find_user_agent(request, user_agent);
+				find_user_agent(request, user_agent, size);
 				char tmp[20];
 				char *tmpw, *tmph, *saveptr;
 				char filename_conv[512];
 				struct stat sb;
 
-				q = find_quality(request, type);
+				q = find_quality(request, type, size);
 				request_size(user_agent, tmp);
 
 				tmpw = strtok_r(tmp, "-", &saveptr);
@@ -385,7 +385,7 @@ void *thread_func(void *args)
 		}
 
 		char method[size];
-		find_method(request, method);
+		find_method(request, method, strlen(request));
 		if (!strcmp(method, "GET")) {
 			if (sendfile(connfd, fd, NULL, stat_buf.st_size) <= 0) {
 				close(fd);

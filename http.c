@@ -4,9 +4,8 @@
 #include <string.h>
 
 //save the http method of the request in a result buffer
-void find_method(char *header, char *result)
+void find_method(char *header, char *result, size_t size)
 {
-	size_t size = strlen(header) + 1;
 	char tmp[size];
 	char *saveptr;
 
@@ -15,10 +14,9 @@ void find_method(char *header, char *result)
 	strncpy(result, strtok_r(tmp, " ", &saveptr), size);
 }
 
-void find_line(char *header, char *target, char *result)
+void find_line(char *header, char *target, char *result, size_t size)
 {
 	char *tmp;
-	size_t size = strlen(header) + 1;
 	char tmpheader[size];
 	char *saveptr;
 
@@ -33,12 +31,11 @@ void find_line(char *header, char *target, char *result)
 	}
 }
 
-void find_user_agent(char *header, char *result)
+void find_user_agent(char *header, char *result, size_t size)
 {
-	size_t size = strlen(header) + 1;
 	char user_agent[size];
 	char *saveptr;
-	find_line(header, "User-Agent: ", user_agent);
+	find_line(header, "User-Agent: ", user_agent, size);
 	user_agent[strlen(user_agent) - 1] = 0;
 	strtok_r(user_agent, " ", &saveptr);
 	strcpy(result, strtok_r(NULL, " ", &saveptr));
@@ -60,9 +57,8 @@ int connection_status(char *header)
 	}
 }
 
-float find_quality(char *buff, char *extension)
+float find_quality(char *buff, char *extension, size_t size)
 {
-	size_t size = strlen(buff) + 1;
 	char header[size];
 	char *tmp;
 	char *imagetmp;
@@ -78,7 +74,7 @@ float find_quality(char *buff, char *extension)
 	}
 
 	char accept_string[size];
-	find_line(header, "Accept: ", accept_string);
+	find_line(header, "Accept: ", accept_string, size);
 
 	tmp = strstr(accept_string, extension);
 
@@ -105,9 +101,8 @@ float find_quality(char *buff, char *extension)
 	return 1;
 }
 
-void parse_resource(char *buff, char *result)
+void parse_resource(char *buff, char *result, size_t size)
 {
-	size_t size = strlen(buff) + 1;
 	char header[size];
 	char *firstline;
 	char *res;
@@ -128,9 +123,8 @@ void parse_resource(char *buff, char *result)
 	strncpy(result, res, size);
 }
 
-void find_type(char *buff, char *result)
+void find_type(char *buff, char *result, size_t size)
 {
-	size_t size = strlen(buff) + 1;
 	char *type;
 	char *saveptr;
 	char temp[size];
